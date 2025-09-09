@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Primary brand color: modern blue */
+    --primary-50: #eff6ff;
+    --primary-100: #dbeafe;
+    --primary-200: #bfdbfe;
+    --primary-300: #93c5fd;
+    --primary-400: #60a5fa;
+    --primary-500: #2563eb; /* main blue */
+    --primary-600: #1d4ed8;
+    --primary-700: #1e40af;
+    --primary-800: #1e3a8a;
+    --primary-900: #1e3a8a;
+  }
+
+  /* Navbar background */
+  .fi-topbar {
+    @apply bg-primary-600 text-white;
+  }
+
+  /* Form headers */
+  .fi-section-header {
+    @apply text-primary-700 font-semibold;
+  }
+}

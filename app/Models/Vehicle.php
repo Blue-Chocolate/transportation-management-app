@@ -8,4 +8,5 @@ class Vehicle extends Model
 {  use \Illuminate\Database\Eloquent\Factories\HasFactory;
     public function company() { return $this->belongsTo(Company::class); }
     public function trips() { return $this->hasMany(Trip::class); }
+    public function driver() { return $this->belongsTo(Driver::class); }
 }

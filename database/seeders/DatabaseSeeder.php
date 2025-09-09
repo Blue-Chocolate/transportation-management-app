@@ -9,11 +9,11 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // Create 5 companies
+        // Create 5 companies with related data
         Company::factory()
             ->count(5)
             ->has(Client::factory()->count(10))
-            ->has(Driver::factory()->count(10))
+            ->has(Driver::factory()->count(10)) // now includes extended fields
             ->has(Vehicle::factory()->count(10))
             ->create()
             ->each(function ($company) {
@@ -27,4 +27,3 @@ class DatabaseSeeder extends Seeder
             });
     }
 }
-
