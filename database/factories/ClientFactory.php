@@ -14,6 +14,7 @@ class ClientFactory extends Factory
             'name'       => $this->faker->name,
             'email'      => $this->faker->safeEmail,
             'phone'      => $this->faker->phoneNumber,
+            'password'   => bcrypt('123'), // Default password
         ];
     }
 }

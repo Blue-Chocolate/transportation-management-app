@@ -19,7 +19,7 @@ return new class extends Migration
     
     // Prevent duplicate assignments
     $table->unique(['driver_id', 'vehicle_id']);
-});
+    });
     }
 
     /**

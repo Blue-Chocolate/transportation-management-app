@@ -20,6 +20,8 @@ return new class extends Migration
     $table->foreignId('client_id')->nullable()->constrained()->cascadeOnDelete();
     $table->foreignId('driver_id')->constrained()->cascadeOnDelete();
     $table->foreignId('vehicle_id')->constrained()->cascadeOnDelete();
+    $table->enum('vehicle_type', ['car', 'van', 'truck']); // denormalized for quick filtering
+    
 
     $table->dateTime('start_time');
     $table->dateTime('end_time');

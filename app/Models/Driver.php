@@ -3,12 +3,18 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 
-class Driver extends Model
+class Driver extends Authenticatable implements FilamentUser
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
+    /**
+     * Fillable attributes.
+     */
     protected $fillable = [
         'company_id',
         'name',
@@ -31,6 +37,9 @@ class Driver extends Model
         'training_certifications',
     ];
 
+    /**
+     * Attribute casts.
+     */
     protected $casts = [
         'license_expiration'      => 'date',
         'date_of_birth'           => 'date',
@@ -38,16 +47,13 @@ class Driver extends Model
         'background_check_date'   => 'date',
         'medical_certified'       => 'boolean',
         'performance_rating'      => 'decimal:2',
-        'route_assignments'       => 'array',   // stored as JSON
-        'training_certifications' => 'array',   // stored as JSON
+        'route_assignments'       => 'array', // JSON
+        'training_certifications' => 'array', // JSON
     ];
 
-    /*
-    |--------------------------------------------------------------------------
-    | Relationships
-    |--------------------------------------------------------------------------
-    */
-
+    /**
+     * Relationships
+     */
     public function company()
     {
         return $this->belongsTo(Company::class);
@@ -55,11 +61,46 @@ class Driver extends Model
 
     public function vehicles()
     {
+        // Assumes driver_vehicle pivot table with timestamps
         return $this->belongsToMany(Vehicle::class)->withTimestamps();
     }
 
     public function trips()
     {
         return $this->hasMany(Trip::class);
+    }
+
+    /**
+     * Filament panel access
+     */
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return $panel->getId() === 'driver';
+    }
+
+    /**
+     * Scopes
+     */
+    public function scopeActive($query)
+    {
+        return $query->whereNull('deleted_at');
+    }
+
+    /**
+     * Model events for validation
+     */
+    protected static function booted()
+    {
+        static::saving(function ($driver) {
+            // Ensure license_expiration is in the future
+            if ($driver->license_expiration && $driver->license_expiration->isPast()) {
+                throw new \InvalidArgumentException('License expiration must be a future date.');
+            }
+
+            // Ensure email uniqueness
+            if ($driver->email && self::where('email', $driver->email)->where('id', '!=', $driver->id)->exists()) {
+                throw new \InvalidArgumentException('Email must be unique.');
+            }
+        });
     }
 }
