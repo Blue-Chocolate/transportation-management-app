@@ -11,7 +11,7 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use App\Filament\Driver\Resources\DriverProfileResource\RelationManagers\TripsRelationManager;
+use App\Filament\Driver\Resources\DriverResource\RelationManagers\TripsRelationManager;
 use Filament\Resources\RelationManagers\HasManyRelationManager; // <-- correct
 
 

@@ -5,6 +5,7 @@ namespace App\Filament\Admin\Resources;
 use App\Filament\Admin\Resources\TripResource\Pages;
 use App\Filament\Admin\Resources\TripResource\RelationManagers;
 use App\Models\Trip;
+use App\Enums\TripStatus;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -12,25 +13,25 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-use App\Enums\TripStatus; // ✅ only if you use enums
 
 class TripResource extends Resource
 {
     protected static ?string $model = Trip::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
-   public static function getNavigationBadge(): ?string
-{
-    return \App\Models\Trip::where('start_time', '<=', now())
-        ->where('end_time', '>=', now())
-        ->where('status', 'active')
-        ->count();
-}
 
-public static function getNavigationBadgeColor(): ?string
-{
-    return 'warning'; // yellow badge
-}
+    public static function getNavigationBadge(): ?string
+    {
+        return Trip::where('start_time', '<=', now())
+            ->where('end_time', '>=', now())
+            ->where('status', 'active')
+            ->count();
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'warning'; // yellow badge
+    }
 
     public static function form(Form $form): Form
     {
@@ -54,7 +55,9 @@ public static function getNavigationBadgeColor(): ?string
                     ->required(),
                 Forms\Components\Textarea::make('description')
                     ->columnSpanFull(),
-                Forms\Components\TextInput::make('status')
+                Forms\Components\Select::make('status')
+                    ->options(TripStatus::options())
+                    ->default(TripStatus::PLANNED->value)
                     ->required(),
             ]);
     }
@@ -81,7 +84,9 @@ public static function getNavigationBadgeColor(): ?string
                 Tables\Columns\TextColumn::make('end_time')
                     ->dateTime()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('status'),
+                Tables\Columns\TextColumn::make('status')
+                    ->badge()
+                    ->colors(TripStatus::colors()),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -90,14 +95,13 @@ public static function getNavigationBadgeColor(): ?string
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                    Tables\Filters\SelectFilter::make('status')
-    ->options(TripStatus::options())
-    ->default('planned') // show pending by default
-    ->query(fn (Builder $query, $value) => $query->where('status', $value)),
-
             ])
             ->filters([
-                //
+                Tables\Filters\SelectFilter::make('status')
+                    ->options(TripStatus::options())
+                    ->default(TripStatus::PLANNED->value)
+                    ->query(fn (Builder $query, array $data): Builder => $query->when($data['value'], fn ($q) => $q->where('status', $data['value'])))
+                    // ->summarize(), // Uncomment if using Filament v3.2+ and summaries are desired
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),

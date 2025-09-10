@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Filament\Resources;
+namespace App\Filament\Client\Resources;
 
-use App\Filament\Resources\ClientResource\Pages;
+use App\Filament\Client\Resources\ClientResource\Pages;
 use App\Models\Client;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -11,6 +11,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Tables\Filters\Filter;
 use Illuminate\Database\Eloquent\Builder;
+use App\Filament\Client\Resources\ClientResource\RelationManagers\TripsRelationManager;
 
 class ClientResource extends Resource
 {
@@ -79,7 +80,7 @@ class ClientResource extends Resource
     public static function getRelations(): array
     {
         return [
-            \App\Filament\Resources\ClientResource\RelationManagers\TripsRelationManager::class,
+            \App\Filament\Client\Resources\ClientResource\RelationManagers\TripsRelationManager::class,
         ];
     }
 

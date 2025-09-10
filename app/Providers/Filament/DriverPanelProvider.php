@@ -35,7 +35,7 @@ class DriverPanelProvider extends PanelProvider
         \App\Filament\Driver\Resources\DriverProfileResource::class,
     ])
     ->colors(['primary' => Color::Amber])
-    ->styles([asset('css/filament/driver/theme.css')])
+    ->viteTheme('resources/css/filament/Driver/theme.css')
     ->pages([Pages\Dashboard::class])
     ->widgets([
         Widgets\AccountWidget::class,

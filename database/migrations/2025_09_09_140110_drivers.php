@@ -19,8 +19,9 @@ return new class extends Migration
             $table->string('name');
             $table->string('phone')->nullable();
             $table->string('email')->nullable();
+            $table->string('password');
             $table->string('emergency_contact')->nullable();
-
+ 
             // Driver details
             $table->string('license')->nullable();
             $table->date('license_expiration')->nullable();
@@ -40,6 +41,7 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->string('insurance_info')->nullable();
             $table->json('training_certifications')->nullable();
+                       $table->softDeletes(); 
 
             $table->timestamps();
             $table->index('company_id');

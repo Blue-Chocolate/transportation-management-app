@@ -49,6 +49,7 @@ class Driver extends Authenticatable implements FilamentUser
         'performance_rating'      => 'decimal:2',
         'route_assignments'       => 'array', // JSON
         'training_certifications' => 'array', // JSON
+        'employment_status'       => \App\Enums\EmploymentStatus::class, // Define enum
     ];
 
     /**
@@ -103,4 +104,11 @@ class Driver extends Authenticatable implements FilamentUser
             }
         });
     }
+public function setPasswordAttribute($value)
+{
+    if ($value) {
+        $this->attributes['password'] = bcrypt($value);
+    }
+}   
+
 }

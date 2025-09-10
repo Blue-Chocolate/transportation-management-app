@@ -1,6 +1,4 @@
-<?php 
-
-
+<?php
 
 namespace Database\Factories;
 
@@ -13,8 +11,9 @@ class VehicleFactory extends Factory
     {
         return [
             'company_id'          => Company::factory(),
-            'name'                => $this->faker->word . ' ' . $this->faker->randomElement(['Truck','Van','Car']),
+            'name'                => $this->faker->word . ' ' . $this->faker->randomElement(['Car', 'Van', 'Truck', 'Bus']),
             'registration_number' => strtoupper($this->faker->bothify('??-####')),
+            'vehicle_type'        => $this->faker->randomElement(['car', 'van', 'truck', 'bus']), // Match Trip enum
         ];
     }
 }

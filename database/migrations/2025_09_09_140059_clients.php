@@ -19,6 +19,7 @@ return new class extends Migration
     $table->string('phone')->nullable();
     $table->string('password');
     $table->timestamps();
+    $table->softDeletes(); // adds `deleted_at` column
 
     $table->index('company_id');
 });

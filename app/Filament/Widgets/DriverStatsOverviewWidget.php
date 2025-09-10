@@ -6,7 +6,7 @@ use App\Models\Driver;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Card;
 
-class DriverStatsOverview extends BaseWidget
+class DriverStatsOverviewWidget extends BaseWidget
 {
     public ?Driver $driver = null;
 

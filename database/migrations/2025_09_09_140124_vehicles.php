@@ -16,9 +16,9 @@ return new class extends Migration
     $table->foreignId('company_id')->constrained()->cascadeOnDelete();
     $table->string('name'); // e.g., "Truck A"
     $table->string('registration_number')->nullable();
-    $table->string('type')->nullable(); // e.g., "Truck", "Van"
+    $table->enum('vehicle_type', ['Truck', 'Van', 'Bus', 'Car'])->nullable();
     $table->timestamps();
-
+    $table->softDeletes(); 
     $table->index('company_id');
 });
 

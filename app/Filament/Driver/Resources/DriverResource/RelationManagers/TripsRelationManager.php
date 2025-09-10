@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Driver\Resources\DriverProfileResource\RelationManagers;
+namespace App\Filament\Driver\Resources\DriverResource\RelationManagers;
 
 use App\Models\Trip;
 use Filament\Forms;

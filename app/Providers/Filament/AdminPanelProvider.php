@@ -18,7 +18,10 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use App\Filament\Pages\Dashboard;
-
+use App\Filament\Widgets\ActiveTripsWidget;
+use App\Filament\Widgets\AvailabilityWidget;
+use App\Filament\Widgets\DriverStatsOverviewWidget;
+use App\Filament\Widgets\MonthlyTripsWidget;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -29,21 +32,30 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
-            
+            // 🎨 Theme + Primary Color
             ->colors([
-               'primary' => Color::Amber,
+                'primary' => Color::Amber,
             ])
-            ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
-            ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
-            
+            ->viteTheme('resources/css/filament/Admin/theme.css')
+            // 📦 Auto-discovery
+            ->discoverResources(in: app_path('Filament/Admin/Resources'), for: 'App\\Filament\\Admin\\Resources')
+            ->discoverPages(in: app_path('Filament/Admin'), for: 'App\\Filament\\Admin')
+            ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
+            // 📊 Pages
             ->pages([
                 Pages\Dashboard::class,
+
             ])
-            ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
+            // 📌 Widgets
             ->widgets([
                 Widgets\AccountWidget::class,
                 Widgets\FilamentInfoWidget::class,
+                ActiveTripsWidget::class,
+                AvailabilityWidget::class,
+                DriverStatsOverviewWidget::class,
+                MonthlyTripsWidget::class,
             ])
+            // 🔒 Middleware
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
@@ -55,10 +67,8 @@ class AdminPanelProvider extends PanelProvider
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
             ])
-            
             ->authMiddleware([
                 Authenticate::class,
             ]);
-            
     }
 }

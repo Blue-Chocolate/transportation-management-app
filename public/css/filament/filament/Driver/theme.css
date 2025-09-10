@@ -1,0 +1,17 @@
+/* Navbar */
+.filament-app-layout header {
+    background-color: #FFB300; /* custom amber */
+    color: white;
+}
+
+/* Sidebar */
+.filament-sidebar {
+    background-color: #FFF8E1; /* light amber */
+}
+
+/* Form headers */
+.filament-form-section-header {
+    font-weight: 700;
+    font-size: 1.25rem;
+    color: #FF6F00;
+}

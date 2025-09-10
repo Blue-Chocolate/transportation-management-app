@@ -11,17 +11,17 @@ class ActiveTripsWidget extends BaseWidget
 {
     protected function getStats(): array
     {
-        $activeTrips = Cache::remember('active_trips', 60, function () {
+        $activeTrips = Cache::remember('active_trips_widget', 300, function () {
             return Trip::where('start_time', '<=', now())
                 ->where('end_time', '>=', now())
-                ->where('status', 'active')
+                ->where('status', \App\Enums\TripStatus::ACTIVE->value)
                 ->count();
         });
 
         return [
             Stat::make('Active Trips', $activeTrips)
                 ->description('Trips currently in progress')
-                ->icon('heroicon-o-truck')
+                ->descriptionIcon('heroicon-o-truck')
                 ->color('warning'),
         ];
     }

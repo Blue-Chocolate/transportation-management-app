@@ -2,7 +2,7 @@
 
 namespace App\Filament\Admin\Resources;
 
-use App\Filament\Resources\DriverResource\Pages;
+use App\Filament\Admin\Resources\DriverResource\Pages;
 use App\Models\Driver;
 use Filament\Forms;
 use Filament\Resources\Resource;

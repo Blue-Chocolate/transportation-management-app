@@ -14,7 +14,9 @@ class DriverFactory extends Factory
             'name'                  => $this->faker->name,
             'phone'                 => $this->faker->phoneNumber,
             'email'                 => $this->faker->safeEmail,
+            'password'              => bcrypt('123'), // Default password
             'emergency_contact'     => $this->faker->phoneNumber,
+
 
             'license'               => strtoupper($this->faker->bothify('LIC-####')),
             'license_expiration'    => $this->faker->dateTimeBetween('now', '+5 years'),
