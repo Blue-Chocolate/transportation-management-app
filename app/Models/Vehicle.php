@@ -11,16 +11,12 @@ class Vehicle extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'company_id',
         'name',
         'registration_number',
         'vehicle_type',
     ];
 
-    public function company()
-    {
-        return $this->belongsTo(Company::class);
-    }
+   
 
     public function trips()
     {

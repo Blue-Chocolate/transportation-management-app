@@ -25,22 +25,20 @@ class TripsRelationManager extends RelationManager
     {
         return $form
             ->schema([
-                Forms\Components\Select::make('company_id')
-                    ->relationship('company', 'name')
-                    ->default(fn ($livewire) => $livewire->ownerRecord->company_id)
-                    ->disabled()
-                    ->required(),
-                Forms\Components\Select::make('driver_id')
-                    ->relationship('driver', 'name', fn (Builder $query) => 
-                        $query->where('company_id', $form->getRecord()->company_id ?? $form->getLivewire()->ownerRecord->company_id)
-                              ->where('employment_status', \App\Enums\EmploymentStatus::ACTIVE))
-                    ->required()
-                    ->preload(),
-                Forms\Components\Select::make('vehicle_id')
-                    ->relationship('vehicle', 'name', fn (Builder $query) => 
-                        $query->where('company_id', $form->getRecord()->company_id ?? $form->getLivewire()->ownerRecord->company_id))
-                    ->required()
-                    ->preload(),
+              Forms\Components\Hidden::make('client_id')
+             ->default(fn () => auth('client')->id())
+             ->required(),
+
+              Forms\Components\Select::make('driver_id')
+              ->relationship('driver', 'name')
+              ->required()
+             ->preload(),
+
+       Forms\Components\Select::make('vehicle_id')
+           ->relationship('vehicle', 'name')
+           ->required()
+           ->preload(),
+
                 Forms\Components\DateTimePicker::make('start_time')
                     ->required()
                     ->afterOrEqual(now()),

@@ -2,19 +2,19 @@
 
 namespace Database\Factories;
 
-use App\Models\Company;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Facades\Hash;
 
 class ClientFactory extends Factory
-{
+{     protected static ?string $password;
+
     public function definition(): array
     {
         return [
-            'company_id' => Company::factory(),
             'name'       => $this->faker->name,
             'email'      => $this->faker->safeEmail,
             'phone'      => $this->faker->phoneNumber,
-            'password'   => bcrypt('123'), // Default password
+            'password'   => bcrypt('12345')
         ];
     }
 }

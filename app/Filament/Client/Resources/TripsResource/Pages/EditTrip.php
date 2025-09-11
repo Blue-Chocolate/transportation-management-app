@@ -3,43 +3,27 @@
 namespace App\Filament\Client\Resources\TripsResource\Pages;
 
 use App\Filament\Client\Resources\TripsResource;
-use App\Models\Driver;
 use App\Models\Trip;
-use Filament\Resources\Pages\CreateRecord;
+use Filament\Resources\Pages\EditRecord;
 use Illuminate\Validation\ValidationException;
 
-class CreateTrips extends CreateRecord
+class EditTrip extends EditRecord
 {
     protected static string $resource = TripsResource::class;
 
-    protected function mutateFormDataBeforeCreate(array $data): array
+    protected function mutateFormDataBeforeSave(array $data): array
     {
         $data['client_id'] = auth('client')->id();
 
-        // Parse dates
+        // prevent overlaps when editing
         $start = \Carbon\Carbon::parse($data['start_time']);
-        $end = \Carbon\Carbon::parse($data['end_time']);
-        $now = \Carbon\Carbon::now();
+        $end   = \Carbon\Carbon::parse($data['end_time']);
 
-        // Validate start_time: not more than 1 minute in the past
-        if ($start->isBefore($now->subMinute(1))) {
-            throw ValidationException::withMessages([
-                'start_time' => 'The start time cannot be more than 1 minute in the past.',
-            ]);
-        }
-
-        // Validate start_time: not more than 3 weeks in the future
-        if ($start->isAfter($now->addWeeks(3))) {
-            throw ValidationException::withMessages([
-                'start_time' => 'The start time cannot be more than 3 weeks in the future.',
-            ]);
-        }
-
-        // Ensure no overlap
         $conflict = Trip::where(function ($q) use ($data) {
                 $q->where('driver_id', $data['driver_id'])
                   ->orWhere('vehicle_id', $data['vehicle_id']);
             })
+            ->where('id', '!=', $this->record->id) // exclude current trip
             ->where(function ($q) use ($start, $end) {
                 $q->whereBetween('start_time', [$start, $end])
                   ->orWhereBetween('end_time', [$start, $end])

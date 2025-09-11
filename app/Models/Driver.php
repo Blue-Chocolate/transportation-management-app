@@ -16,7 +16,6 @@ class Driver extends Authenticatable implements FilamentUser
      * Fillable attributes.
      */
     protected $fillable = [
-        'company_id',
         'name',
         'phone',
         'email',
@@ -55,10 +54,7 @@ class Driver extends Authenticatable implements FilamentUser
     /**
      * Relationships
      */
-    public function company()
-    {
-        return $this->belongsTo(Company::class);
-    }
+    
 
     public function vehicles()
     {
@@ -104,11 +100,11 @@ class Driver extends Authenticatable implements FilamentUser
             }
         });
     }
-public function setPasswordAttribute($value)
-{
-    if ($value) {
-        $this->attributes['password'] = bcrypt($value);
-    }
-}   
+// public function setPasswordAttribute($value)
+// {
+//     if ($value) {
+//         $this->attributes['password'] = bcrypt($value);
+//     }
+// }   
 
 }

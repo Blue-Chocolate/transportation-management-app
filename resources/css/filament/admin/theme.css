@@ -17,9 +17,11 @@
   }
 }
 .fi-topbar {
-  @apply bg-primary-600 text-white;
+  @apply bg-primary-600 text-primary-50;
 }
-
 .fi-section-header {
   @apply text-primary-700 font-semibold;
 }
+
+.fi-btn-label {
+color: blue;}

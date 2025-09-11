@@ -39,6 +39,7 @@ class AdminPanelProvider extends PanelProvider
             ->viteTheme('resources/css/filament/Admin/theme.css')
             // 📦 Auto-discovery
             ->discoverResources(in: app_path('Filament/Admin/Resources'), for: 'App\\Filament\\Admin\\Resources')
+             ->discoverResources(in: app_path('Filament/PAGES'), for: 'App\\Filament\\PAGES')
             ->discoverPages(in: app_path('Filament/Admin'), for: 'App\\Filament\\Admin')
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             // 📊 Pages

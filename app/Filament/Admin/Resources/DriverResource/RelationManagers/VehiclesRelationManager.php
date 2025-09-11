@@ -17,22 +17,20 @@ class VehiclesRelationManager extends RelationManager
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('name')->sortable()->searchable(),
-                Tables\Columns\TextColumn::make('registration_number')->label('Reg #')->searchable(),
-                Tables\Columns\TextColumn::make('type')->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('name')
+                    ->sortable()
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('registration_number')
+                    ->label('Reg #')
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('vehicle_type') // غيّرت من type → vehicle_type
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->headerActions([
                 Tables\Actions\AttachAction::make()
                     ->recordSelect(fn (Select $select) => $select->searchable()->preload())
-                    ->recordSelectSearchColumns(['name', 'registration_number'])
-                    ->recordSelectOptionsQuery(fn (Builder $query) =>
-                        $query->where('company_id', $this->getOwnerRecord()->company_id)
-                    ),
-                Tables\Actions\CreateAction::make()
-                    ->mutateFormDataUsing(function (array $data): array {
-                        $data['company_id'] = $this->getOwnerRecord()->company_id;
-                        return $data;
-                    }),
+                    ->recordSelectSearchColumns(['name', 'registration_number']),
+                Tables\Actions\CreateAction::make(),
             ])
             ->actions([
                 Tables\Actions\DetachAction::make(),

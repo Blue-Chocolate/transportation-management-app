@@ -2,18 +2,17 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Enums\TripStatus;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Validation\ValidationException;
 
 class Trip extends Model
 {
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'company_id',
         'client_id',
         'driver_id',
         'vehicle_id',
@@ -30,13 +29,7 @@ class Trip extends Model
         'status' => TripStatus::class,
     ];
 
-    /**
-     * Relationships
-     */
-    public function company()
-    {
-        return $this->belongsTo(Company::class);
-    }
+    
 
     public function client()
     {
@@ -53,22 +46,19 @@ class Trip extends Model
         return $this->belongsTo(Vehicle::class);
     }
 
-    /**
-     * Booted model events for overlap validation
-     */
     protected static function booted()
     {
         static::saving(function ($trip) {
+            // Validate end_time > start_time
             if ($trip->end_time <= $trip->start_time) {
-                throw new \Illuminate\Validation\ValidationException('End time must be after start time.');
+                throw ValidationException::withMessages([
+                    'end_time' => 'End time must be after start time.',
+                ]);
             }
-  if ($trip->vehicle && $trip->vehicle->vehicle_type) {
-    $trip->vehicle_type = $trip->vehicle->vehicle_type;
-} else {
-    $trip->vehicle_type = 'Car'; // Fallback to default
-}
+
+            // Check for driver overlap
             $driverConflict = self::where('driver_id', $trip->driver_id)
-                ->where('id', '!=', $trip->id) // Exclude the current trip when updating
+                ->where('id', '!=', $trip->id)
                 ->where(function ($query) use ($trip) {
                     $query->whereBetween('start_time', [$trip->start_time, $trip->end_time])
                           ->orWhereBetween('end_time', [$trip->start_time, $trip->end_time])
@@ -80,12 +70,14 @@ class Trip extends Model
                 ->exists();
 
             if ($driverConflict) {
-                throw new \InvalidArgumentException('Driver has an overlapping trip.');
+                throw ValidationException::withMessages([
+                    'start_time' => 'Driver has an overlapping trip.',
+                ]);
             }
 
             // Check for vehicle overlap
             $vehicleConflict = self::where('vehicle_id', $trip->vehicle_id)
-                ->where('id', '!=', $trip->id) 
+                ->where('id', '!=', $trip->id)
                 ->where(function ($query) use ($trip) {
                     $query->whereBetween('start_time', [$trip->start_time, $trip->end_time])
                           ->orWhereBetween('end_time', [$trip->start_time, $trip->end_time])
@@ -97,12 +89,15 @@ class Trip extends Model
                 ->exists();
 
             if ($vehicleConflict) {
-                throw new \InvalidArgumentException('Vehicle has an overlapping trip.');
+                throw ValidationException::withMessages([
+                    'start_time' => 'Vehicle has an overlapping trip.',
+                ]);
+            }
+
+            // Sync vehicle_type with vehicle
+            if ($trip->vehicle) {
+                $trip->vehicle_type = $trip->vehicle->type;
             }
         });
-    }
-    public function scopeActive($query)
-    {
-        return $query->whereNull('deleted_at');
     }
 }

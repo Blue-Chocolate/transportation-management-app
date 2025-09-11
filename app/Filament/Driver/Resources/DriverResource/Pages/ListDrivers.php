@@ -3,7 +3,6 @@
 namespace App\Filament\Driver\Resources\DriverResource\Pages;
 
 use App\Filament\Driver\Resources\DriverProfileResource;
-use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 
 class ListDrivers extends ListRecords
@@ -12,8 +11,6 @@ class ListDrivers extends ListRecords
 
     protected function getHeaderActions(): array
     {
-        return [
-            Actions\CreateAction::make(),
-        ];
+        return [];
     }
 }

@@ -2,119 +2,117 @@
 
 namespace App\Filament\Client\Resources;
 
+use App\Enums\TripStatus;
 use App\Filament\Client\Resources\TripsResource\Pages;
+use App\Models\Driver;
 use App\Models\Trip;
+use App\Models\Vehicle;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Validation\ValidationException;
-use APP\Models\User;
 
 class TripsResource extends Resource
 {
     protected static ?string $model = Trip::class;
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
-
-    // Handle driver and vehicle assignment before creating a trip
-    protected function mutateFormDataBeforeCreate(array $data): array
-    {
-      $driver = \App\Services\DriverAssignmentService::assignDriver(
-    $data['vehicle_type'],
-    $data['start_time'],
-    $data['end_time']
-);
-
-if (!$driver) {
-    throw ValidationException::withMessages([
-        'vehicle_type' => 'No available drivers for this vehicle type at the selected time.',
-    ]);
-}
-
-        // Pick first vehicle of the selected type assigned to the driver
-        $vehicle = $driver->vehicles()->where('type', $data['vehicle_type'])->first();
-
-        if (!$vehicle) {
-            throw ValidationException::withMessages([
-                'vehicle_type' => 'Assigned driver does not have a vehicle of the selected type.',
-            ]);
-        }
-
-       $data['driver_id'] = $driver->id;
-       $data['vehicle_id'] = $driver->assignedVehicle->id; // adjust if necessary
-
-
-        return $data;
-    }
+    protected static ?string $navigationGroup = 'Trips';
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-            Forms\Components\Select::make('company_id')
-                ->label('Company')
-                ->relationship('company', 'name') // assumes Trip model has a `company()` relation
-                ->required(),
+                // client_id hidden (auto)
+                Forms\Components\Hidden::make('client_id')
+                    ->default(fn () => auth('client')->id())
+                    ->required(),
 
-            Forms\Components\Select::make('vehicle_type')
-                ->label('Vehicle Type')
-                ->options([
-                    'car' => 'Car',
-                    'van' => 'Van',
-                    'truck' => 'Truck',
-                ])
-                ->required(),
+                // driver select
+                Forms\Components\Select::make('driver_id')
+                    ->label('Driver')
+                    ->relationship('driver', 'name')
+                    ->required()
+                    ->preload(),
 
-            Forms\Components\DateTimePicker::make('start_time')
-                ->label('Start Time')
-                ->required(),
+                // vehicle select
+                Forms\Components\Select::make('vehicle_id')
+                    ->label('Vehicle')
+                    ->relationship('vehicle', 'name')
+                    ->required()
+                    ->preload(),
 
-            Forms\Components\DateTimePicker::make('end_time')
-                ->label('End Time')
-                ->required(),
+                Forms\Components\DateTimePicker::make('start_time')
+                    ->required()
+                    ->afterOrEqual(now())
+                    ->reactive()
+                    ->afterStateUpdated(fn ($state, callable $set) =>
+                        $set('end_time', \Carbon\Carbon::parse($state)->addHour())
+                    ),
 
-            Forms\Components\Hidden::make('driver_id'),
-            Forms\Components\Hidden::make('vehicle_id'),
-        ]);
-}
+                Forms\Components\DateTimePicker::make('end_time')
+                    ->required()
+                    ->after('start_time'),
+
+                Forms\Components\Textarea::make('description')
+                    ->columnSpanFull(),
+
+                Forms\Components\Select::make('status')
+                    ->options(TripStatus::options())
+                    ->default(TripStatus::PLANNED->value)
+                    ->disabled(),
+            ]);
+    }
 
     public static function table(Table $table): Table
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('driver.name')->label('Driver'),
-                Tables\Columns\TextColumn::make('vehicle.name')->label('Vehicle'),
-                Tables\Columns\TextColumn::make('vehicle.type')->label('Vehicle Type'),
-                Tables\Columns\TextColumn::make('start_time')->label('Start Time')->dateTime(),
-                Tables\Columns\TextColumn::make('end_time')->label('End Time')->dateTime(),
-            ])
+                Tables\Columns\TextColumn::make('driver.name')->sortable()->searchable(),
+                Tables\Columns\TextColumn::make('vehicle.name')->sortable()->searchable(),
+                Tables\Columns\TextColumn::make('start_time')->dateTime()->sortable(),
+                Tables\Columns\TextColumn::make('end_time')->dateTime()->sortable(),
+                Tables\Columns\TextColumn::make('description')->limit(50),
+                Tables\Columns\BadgeColumn::make('status')
+                    ->colors(TripStatus::colors())
+->formatStateUsing(fn ($state) => 
+    $state instanceof TripStatus 
+        ? $state->getLabel() 
+        : TripStatus::from($state)->getLabel()
+),            ])
             ->filters([
-                //
+                Tables\Filters\SelectFilter::make('status')
+                    ->options(TripStatus::options())
+                    ->default(TripStatus::PLANNED->value),
             ])
             ->actions([
+                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
-            ]);
+                Tables\Actions\DeleteBulkAction::make(),
+            ])
+            ->defaultSort('start_time', 'desc');
     }
 
-    public static function getRelations(): array
+    public static function getEloquentQuery(): Builder
     {
-        return [
-            //
-        ];
+        // limit trips to the logged-in client only
+        return parent::getEloquentQuery()
+            ->where('client_id', auth('client')->id())
+            ->with(['driver', 'vehicle']);
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListTrips::route('/'),
+            'index'  => Pages\ListTrips::route('/'),
             'create' => Pages\CreateTrips::route('/create'),
-            'edit' => Pages\EditTrips::route('/{record}/edit'),
+            'view'   => Pages\ViewTrip::route('/{record}'),
+            'edit'   => Pages\EditTrip::route('/{record}/edit'),
         ];
     }
 }

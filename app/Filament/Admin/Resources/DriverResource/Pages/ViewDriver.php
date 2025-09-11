@@ -1,25 +1,19 @@
 <?php
 
 namespace App\Filament\Admin\Resources\DriverResource\Pages;
-use  App\Filament\Admin\Resources\DriverResource;
-use App\Filament\Widgets\DriverStatsOverview;
+
+use App\Filament\Admin\Resources\DriverResource;
 use Filament\Resources\Pages\ViewRecord;
 
 class ViewDriver extends ViewRecord
 {
     protected static string $resource = DriverResource::class;
 
-    protected function getHeaderWidgets(): array
+    protected function mutateFormDataBeforeFill(array $data): array
     {
-        return [
-            DriverStatsOverview::class,
-        ];
-    }
+        // Preload relations to avoid N+1 in infolist
+        $this->record->load('vehicles');
 
-    protected function mutateWidgetData(array $data): array
-    {
-        return array_merge($data, [
-            'driver' => $this->record, // inject the driver model
-        ]);
+        return $data;
     }
 }

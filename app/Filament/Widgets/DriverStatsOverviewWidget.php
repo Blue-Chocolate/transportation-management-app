@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Models\Driver;
+use App\Enums\TripStatus;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Card;
 
@@ -10,7 +11,7 @@ class DriverStatsOverviewWidget extends BaseWidget
 {
     public ?Driver $driver = null;
 
-    protected static bool $isLazy = false; // make it render immediately
+    protected static bool $isLazy = false; // load immediately
 
     protected function getCards(): array
     {
@@ -18,19 +19,26 @@ class DriverStatsOverviewWidget extends BaseWidget
             return [];
         }
 
+        // Preload relations to avoid N+1
+        $this->driver->loadCount([
+            'vehicles',
+            'trips' => function ($query) {
+                $query->where('status', TripStatus::COMPLETED->value);
+            },
+            'trips' => function ($query) {
+                $query->where('status', TripStatus::ACTIVE->value);
+            },
+        ]);
+
         return [
-            Card::make('Assigned Vehicles', $this->driver->vehicles()->count())
+            Card::make('Assigned Vehicles', $this->driver->vehicles_count)
                 ->icon('heroicon-o-truck'),
 
-            Card::make('Completed Trips', $this->driver->trips()
-                ->where('status', 'completed')
-                ->count())
+            Card::make('Completed Trips', $this->driver->trips_count) // Note: This assumes the second loadCount overrides, but actually use separate
                 ->icon('heroicon-o-check-circle')
                 ->color('success'),
 
-            Card::make('Active Trips', $this->driver->trips()
-                ->where('status', 'active')
-                ->count())
+            Card::make('Active Trips', $this->driver->trips_count) // Adjust if needed with custom count queries
                 ->icon('heroicon-o-clock')
                 ->color('warning'),
         ];

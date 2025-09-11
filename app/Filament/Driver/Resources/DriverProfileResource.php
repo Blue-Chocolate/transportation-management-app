@@ -3,7 +3,7 @@
 namespace App\Filament\Driver\Resources;
 
 use App\Filament\Driver\Resources\DriverResource\Pages;
-use App\Filament\Driver\Resources\DriverResource\RelationManagers;
+use App\Filament\Driver\Resources\DriverResource\RelationManagers\TripsRelationManager;
 use App\Models\Driver;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -11,9 +11,6 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use App\Filament\Driver\Resources\DriverResource\RelationManagers\TripsRelationManager;
-use Filament\Resources\RelationManagers\HasManyRelationManager; // <-- correct
-
 
 class DriverProfileResource extends Resource
 {
@@ -26,17 +23,15 @@ class DriverProfileResource extends Resource
      */
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->where('id', auth('driver')->id());
+        return parent::getEloquentQuery()
+            ->where('id', auth('driver')->id())
+            ->with('vehicles');
     }
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                // Hidden company_id: driver cannot manually change
-                Forms\Components\Hidden::make('company_id')
-                    ->default(auth('driver')->user()->company_id),
-
                 Forms\Components\TextInput::make('name')
                     ->required()
                     ->maxLength(255),
@@ -111,7 +106,6 @@ class DriverProfileResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->query(fn($query) => $query->with(['company', 'vehicles'])) // eager-load relationships
             ->columns([
                 Tables\Columns\TextColumn::make('name')->searchable(),
                 Tables\Columns\TextColumn::make('email')->searchable(),

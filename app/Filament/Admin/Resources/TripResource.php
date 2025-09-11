@@ -3,16 +3,19 @@
 namespace App\Filament\Admin\Resources;
 
 use App\Filament\Admin\Resources\TripResource\Pages;
-use App\Filament\Admin\Resources\TripResource\RelationManagers;
+use App\Filament\Resources\TripResource\RelationManagers;
 use App\Models\Trip;
+use App\Models\Driver;
 use App\Enums\TripStatus;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\DateTimePicker;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Tables\Columns\TextColumn;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class TripResource extends Resource
 {
@@ -22,9 +25,10 @@ class TripResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        return Trip::where('start_time', '<=', now())
+        return Trip::query()
+            ->where('start_time', '<=', now())
             ->where('end_time', '>=', now())
-            ->where('status', 'active')
+            ->where('status', TripStatus::ACTIVE->value)
             ->count();
     }
 
@@ -35,73 +39,76 @@ class TripResource extends Resource
 
     public static function form(Form $form): Form
     {
-        return $form
-            ->schema([
-                Forms\Components\TextInput::make('company_id')
-                    ->required()
-                    ->numeric(),
-                Forms\Components\TextInput::make('client_id')
-                    ->numeric()
-                    ->default(null),
-                Forms\Components\TextInput::make('driver_id')
-                    ->required()
-                    ->numeric(),
-                Forms\Components\TextInput::make('vehicle_id')
-                    ->required()
-                    ->numeric(),
-                Forms\Components\DateTimePicker::make('start_time')
-                    ->required(),
-                Forms\Components\DateTimePicker::make('end_time')
-                    ->required(),
-                Forms\Components\Textarea::make('description')
-                    ->columnSpanFull(),
-                Forms\Components\Select::make('status')
-                    ->options(TripStatus::options())
-                    ->default(TripStatus::PLANNED->value)
-                    ->required(),
-            ]);
+        return $form->schema([
+            Select::make('client_id')
+                ->label('Client')
+                ->relationship('client', 'name')
+                ->searchable()
+                ->preload()
+                ->required(),
+
+            Select::make('driver_id')
+                ->label('Driver')
+                ->relationship('driver', 'name')
+                ->searchable()
+                ->preload()
+                ->required()
+                ->reactive()
+                ->afterStateUpdated(function (callable $set) {
+                    $set('vehicle_id', null); // Reset vehicle when driver changes
+                }),
+
+            Select::make('vehicle_id')
+                ->label('Vehicle')
+                ->options(function (callable $get) {
+                    $driverId = $get('driver_id');
+                    if (!$driverId) {
+                        return [];
+                    }
+                    $driver = Driver::find($driverId);
+                    return $driver ? $driver->vehicles->pluck('name', 'id') : [];
+                })
+                ->searchable()
+                ->preload()
+                ->required()
+                ->reactive(),
+
+            DateTimePicker::make('start_time')
+                ->required()
+                ->default(now())
+                ->reactive(),
+
+            DateTimePicker::make('end_time')
+                ->required()
+                ->default(now()->addHours(1))
+                ->after('start_time')
+                ->reactive(),
+
+            Select::make('status')
+                ->options(TripStatus::options())
+                ->default(TripStatus::PLANNED->value)
+                ->required(),
+        ]);
     }
 
     public static function table(Table $table): Table
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('company_id')
-                    ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('client_id')
-                    ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('driver_id')
-                    ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('vehicle_id')
-                    ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('start_time')
-                    ->dateTime()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('end_time')
-                    ->dateTime()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('status')
-                    ->badge()
-                    ->colors(TripStatus::colors()),
-                Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('client.name')->label('Client'),
+                TextColumn::make('driver.name')->label('Driver'),
+                TextColumn::make('vehicle.name')->label('Vehicle'),
+                TextColumn::make('start_time')->dateTime(),
+                TextColumn::make('end_time')->dateTime(),
+                TextColumn::make('status')->badge(),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->options(TripStatus::options())
                     ->default(TripStatus::PLANNED->value)
-                    ->query(fn (Builder $query, array $data): Builder => $query->when($data['value'], fn ($q) => $q->where('status', $data['value'])))
-                    // ->summarize(), // Uncomment if using Filament v3.2+ and summaries are desired
+                    ->query(fn (Builder $query, array $data): Builder =>
+                        $query->when($data['value'] ?? null, fn ($q) => $q->where('status', $data['value']))
+                    ),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),

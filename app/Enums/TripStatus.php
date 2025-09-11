@@ -1,14 +1,13 @@
 <?php
 
 namespace App\Enums;
-
-enum TripStatus: string
+use Filament\Support\Contracts\HasLabel;
+enum TripStatus: string implements HasLabel
 {
     case PLANNED = 'planned';
     case ACTIVE = 'active';
     case COMPLETED = 'completed';
     case CANCELLED = 'cancelled';
-
     /**
      * Options for Filament Select fields.
      */
@@ -21,7 +20,7 @@ enum TripStatus: string
             self::CANCELLED->value => 'Cancelled',
         ];
     }
-     public function getLabel(): ?string
+    public function getLabel(): ?string
     {
         return match ($this) {
             self::PLANNED => 'Planned',

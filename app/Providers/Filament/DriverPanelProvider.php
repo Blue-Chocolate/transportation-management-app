@@ -35,7 +35,7 @@ class DriverPanelProvider extends PanelProvider
         \App\Filament\Driver\Resources\DriverProfileResource::class,
     ])
     ->colors(['primary' => Color::Amber])
-    ->viteTheme('resources/css/filament/Driver/theme.css')
+            ->viteTheme('resources/css/filament/Driver/theme.css')
     ->pages([Pages\Dashboard::class])
     ->widgets([
         Widgets\AccountWidget::class,
@@ -48,13 +48,14 @@ class DriverPanelProvider extends PanelProvider
             ])
             ->discoverResources(in: app_path('Filament/Driver/Resources'), for: 'App\\Filament\\Driver\\Resources')
             ->discoverPages(in: app_path('Filament/Driver/Pages'), for: 'App\\Filament\\Driver\\Pages')
+
             ->pages([
                 Pages\Dashboard::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Driver/Widgets'), for: 'App\\Filament\\Driver\\Widgets')
             ->widgets([
                 Widgets\AccountWidget::class,
-                Widgets\FilamentInfoWidget::class,
+                // Widgets\FilamentInfoWidget::class,
             ])
             ->middleware([
                 EncryptCookies::class,

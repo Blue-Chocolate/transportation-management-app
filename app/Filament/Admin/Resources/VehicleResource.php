@@ -19,10 +19,6 @@ class VehicleResource extends Resource
     public static function form(Form $form): Form
     {
         return $form->schema([
-            Forms\Components\Select::make('company_id')
-                ->relationship('company', 'name')
-                ->required(),
-
             Forms\Components\TextInput::make('name')
                 ->required()
                 ->maxLength(255),
@@ -39,7 +35,6 @@ class VehicleResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('id')->sortable(),
-                Tables\Columns\TextColumn::make('company.name')->sortable()->searchable(),
                 Tables\Columns\TextColumn::make('name')->searchable()->sortable(),
                 Tables\Columns\TextColumn::make('registration_number')->label('Reg. Number'),
                 Tables\Columns\TextColumn::make('created_at')->dateTime()->sortable(),

@@ -4,7 +4,7 @@ namespace App\Filament\Driver\Resources;
 
 use App\Filament\Driver\Resources\TripsResource\Pages;
 use App\Models\Trip;
-use App\Enums\TripStatus; // ✅ only if you use enums
+use App\Enums\TripStatus;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -25,22 +25,12 @@ class TripsResource extends Resource
             Forms\Components\DateTimePicker::make('end_time')->disabled(),
             Forms\Components\Textarea::make('description')->disabled(),
             Forms\Components\Select::make('status')
-                ->options(TripStatus::class) // ✅ enum (preferred)
-                // ->options([ // fallback if no enum
-                //     'planned'   => 'Planned',
-                //     'active'    => 'Active',
-                //     'completed' => 'Completed',
-                //     'cancelled' => 'Cancelled',
-                // ])
+                ->options(TripStatus::options())
                 ->required()
                 ->native(false),
-                Forms\Components\Select::make('status')
-    ->options(TripStatus::options())
-    ->required()
-    ->native(false),
         ]);
     }
-
+    
     public static function table(Table $table): Table
     {
         return $table
@@ -51,20 +41,11 @@ class TripsResource extends Resource
                 Tables\Columns\TextColumn::make('end_time')->dateTime(),
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
-                    ->colors([
-                        'primary' => 'planned',
-                        'warning' => 'active',
-                        'success' => 'completed',
-                        'danger'  => 'cancelled',
-                    ]),
-                    Tables\Columns\TextColumn::make('status')
-                        ->badge()
                     ->colors(TripStatus::colors()),
             ])
-            
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
-                    ->options(TripStatus::class), // ✅ enum
+                    ->options(TripStatus::class),
             ])
             ->actions([
                 Tables\Actions\Action::make('update_status')

@@ -2,19 +2,19 @@
 
 namespace Database\Factories;
 
-use App\Models\Company;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class DriverFactory extends Factory
-{
+{    protected static ?string $password;
+
     public function definition(): array
     {
-        return [
-            'company_id'            => Company::factory(),
-            'name'                  => $this->faker->name,
+        return [            'name'                  => $this->faker->name,
             'phone'                 => $this->faker->phoneNumber,
             'email'                 => $this->faker->safeEmail,
-            'password'              => bcrypt('123'), // Default password
+            'password'              => bcrypt('12345'),
             'emergency_contact'     => $this->faker->phoneNumber,
 
 
@@ -37,3 +37,6 @@ class DriverFactory extends Factory
         ];
     }
 }
+
+
+//19669

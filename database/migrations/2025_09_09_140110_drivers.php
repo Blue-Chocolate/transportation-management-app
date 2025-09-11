@@ -13,7 +13,6 @@ return new class extends Migration
     {
         Schema::create('drivers', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
 
             // Basic info
             $table->string('name');
@@ -44,7 +43,6 @@ return new class extends Migration
                        $table->softDeletes(); 
 
             $table->timestamps();
-            $table->index('company_id');
         });
     }
 

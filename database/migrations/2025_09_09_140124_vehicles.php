@@ -13,13 +13,11 @@ return new class extends Migration
     {
         Schema::create('vehicles', function (Blueprint $table) {
     $table->id();
-    $table->foreignId('company_id')->constrained()->cascadeOnDelete();
     $table->string('name'); // e.g., "Truck A"
     $table->string('registration_number')->nullable();
-    $table->enum('vehicle_type', ['Truck', 'Van', 'Bus', 'Car'])->nullable();
+    $table->enum('vehicle_type', ['car', 'van', 'truck' , 'bus'])->default('car'); // denormalized for quick filtering
     $table->timestamps();
     $table->softDeletes(); 
-    $table->index('company_id');
 });
 
     }

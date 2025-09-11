@@ -30,10 +30,9 @@ class ClientPanelProvider extends PanelProvider
             ->registration()                  // Enable Filament registration
             ->authPasswordBroker('clients')   // Use 'clients' password broker for resets
             ->passwordReset()                 // Enable password reset page
-            ->emailVerification()             // (Optional) enable email verification
             ->profile()
             ->colors([
-                'primary' => Color::Amber,
+                'primary' => Color::Green,
             ])
             ->discoverResources(in: app_path('Filament/Client/Resources'), for: 'App\\Filament\\Client\\Resources')
             ->discoverPages(in: app_path('Filament/Client/Pages'), for: 'App\\Filament\\Client\\Pages')

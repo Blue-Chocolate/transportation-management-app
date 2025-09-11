@@ -3,7 +3,6 @@
 namespace App\Filament\Driver\Resources\TripsResource\Pages;
 
 use App\Filament\Driver\Resources\TripsResource;
-use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 
 class ListTrips extends ListRecords
@@ -12,8 +11,6 @@ class ListTrips extends ListRecords
 
     protected function getHeaderActions(): array
     {
-        return [
-            Actions\CreateAction::make(),
-        ];
+        return [];
     }
 }
