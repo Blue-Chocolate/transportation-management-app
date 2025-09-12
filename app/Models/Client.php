@@ -2,74 +2,56 @@
 
 namespace App\Models;
 
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Models\Trip;
+use Illuminate\Database\Eloquent\Builder;
 
-class Client extends Authenticatable implements FilamentUser
+class Client extends Authenticatable
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, Notifiable;
 
-    /**
-     * Determine if the client can access a given Filament panel.
-     */
-    public function canAccessPanel(Panel $panel): bool
-    {
-        return $panel->getId() === 'client';
-    }
+    protected $guarded = ['id'];
 
-   
-  
-
-    /**
-     * Get the trips associated with the client.
-     */
-    public function trips()
-    {
-        return $this->hasMany(Trip::class);
-    }
-
-    /**
-     * Fillable attributes.
-     */
     protected $fillable = [
         'name',
         'email',
         'phone',
         'password',
+        'company_id',
     ];
 
-    /**
-     * Hidden attributes for arrays.
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * Automatically hash passwords when setting them.
-     */
-    // public function setPasswordAttribute($value)
-    // {
-    //     if ($value) {
-    //         $this->attributes['password'] = bcrypt($value);
-    //     }
-    // }
-
-    /**
-     * Scope to get only active clients (not soft-deleted).
-     */
-    public function scopeActive($query)
+    protected function casts(): array
     {
-        return $query->whereNull('deleted_at');
+        return [
+            'password' => 'hashed',
+        ];
+    }
+public function company()
+    {
+        return $this->belongsTo(Company::class)->select(['id', 'name']);
     }
 
-    /**
-     * Enable timestamps (created_at, updated_at) by default.
-     */
-    public $timestamps = true;
+    public function trips()
+    {
+        return $this->hasMany(Trip::class)->select(['id', 'driver_id', 'vehicle_id', 'company_id']);
+    }
+
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return $panel->getId() === 'client';
+    }
+
+    public function scopeForCompany(Builder $query, $companyId): Builder
+    {
+        return $query->where('company_id', $companyId);
+    }
 }

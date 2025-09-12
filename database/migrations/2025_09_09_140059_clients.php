@@ -10,26 +10,26 @@
          * Run the migrations.
          */
         public function up(): void
-        {
+    {
         Schema::create('clients', function (Blueprint $table) {
-        $table->id();
-        $table->string('name');
-        $table->string('email')->unique();
-        $table->string('phone')->nullable();
-        $table->string('password');
-        $table->timestamps();
-        $table->softDeletes(); // adds `deleted_at` column
+            $table->id();
+            $table->string('name');
+            $table->string('email')->unique();
+            $table->string('phone')->nullable();
+            $table->string('password');
+            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
+            $table->timestamps();
+            $table->softDeletes();
+        });
+    }
 
-    });
-
-        }
+        
 
         /**
          * Reverse the migrations.
          */
         public function down(): void
-        {
-            //
-        }
-    };
-    
+    {
+        Schema::dropIfExists('clients');
+    }
+};

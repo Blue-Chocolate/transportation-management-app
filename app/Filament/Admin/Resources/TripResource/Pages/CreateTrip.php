@@ -41,7 +41,7 @@ class CreateTrip extends CreateRecord
                     'vehicle_id' => 'This vehicle is not assigned to the selected driver.',
                 ]);
             }
-
+            
             // Check overlap conflicts for driver or vehicle
             $conflict = Trip::where(function ($q) use ($data) {
                     $q->where('driver_id', $data['driver_id'])
@@ -56,10 +56,20 @@ class CreateTrip extends CreateRecord
                     'start_time' => 'Driver or vehicle already booked in this time range. Please choose a different time, driver, or vehicle.',
                 ]);
             }
+             $driverConflict = Trip::where('driver_id', $data['driver_id'])
+        ->where('start_time', '<', $end)
+        ->where('end_time', '>', $start)
+        ->exists();
+
+    if ($driverConflict) {
+        $this->form->addError('driver_id', 'This driver is already on another trip during the selected time range.');
+        return $data;
+    }
+            
 
             return $data;
         } catch (ValidationException $e) {
-            // Filament will handle ValidationException and display field-specific errors
+
             throw $e;
         } catch (Throwable $e) {
             // Catch any unexpected errors and notify the admin
