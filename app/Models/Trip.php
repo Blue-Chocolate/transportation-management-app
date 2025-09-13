@@ -7,10 +7,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Validation\ValidationException;
 use App\Enums\TripStatus;
+use Illuminate\Database\Eloquent\Builder;
+use App\Models\Traits\BelongsToCompany;
 
 class Trip extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, BelongsToCompany;
 
     protected $guarded = ['id'];
 
@@ -56,46 +58,55 @@ class Trip extends Model
         return $this->vehicle->vehicle_type ?? null;
     }
 
+    public function scopeForCompany(Builder $query, $companyId): Builder
+    {
+        return $query->where('company_id', $companyId);
+    }
+
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('status', TripStatus::ACTIVE);
+    }
+
     protected static function booted()
     {
         static::saving(function ($trip) {
-            // Ensure related records belong to the same company
-            if ($trip->client && $trip->driver && $trip->vehicle) {
-                $companyId = $trip->company_id ?? $trip->driver->company_id;
-                if ($trip->client->company_id !== $companyId || $trip->driver->company_id !== $companyId || $trip->vehicle->company_id !== $companyId) {
-                    throw ValidationException::withMessages([
-                        'company_id' => 'Client, driver, and vehicle must belong to the same company.',
-                    ]);
-                }
-                $trip->company_id = $companyId;
+            if (!$trip->company_id && $trip->driver) {
+                $trip->company_id = $trip->driver->company_id;
             }
 
-            if ($trip->end_time && $trip->end_time <= $trip->start_time) {
+            if ($trip->end_time <= $trip->start_time) {
                 throw ValidationException::withMessages([
                     'end_time' => 'End time must be after start time.',
                 ]);
             }
 
-            $overlapCondition = fn ($q) => $q->whereNull('deleted_at')
-                ->where('status', '!=', TripStatus::CANCELLED)
-                ->where(function ($subQ) use ($trip) {
-                    $subQ->where('start_time', '<', $trip->end_time)
-                         ->where('end_time', '>', $trip->start_time);
-                });
+            $overlapCondition = function ($q) use ($trip) {
+                return $q->whereNull('deleted_at')
+                         ->where('status', '!=', TripStatus::CANCELLED)
+                         ->where(function ($subQ) use ($trip) {
+                             $subQ->where('start_time', '<', $trip->end_time)
+                                  ->where('end_time', '>', $trip->start_time);
+                         });
+            };
 
-            if ($trip->driver_id && self::where('driver_id', $trip->driver_id)
-                ->where('id', '!=', $trip->id)
-                ->where($overlapCondition)
-                ->exists()) {
+            $driverConflict = self::where('driver_id', $trip->driver_id)
+                                  ->where('id', '!=', $trip->getKey())
+                                  ->where($overlapCondition)
+                                  ->exists();
+
+            if ($driverConflict) {
                 throw ValidationException::withMessages([
                     'driver_id' => 'Driver has an overlapping trip.',
                 ]);
             }
 
-            if ($trip->vehicle_id && self::where('vehicle_id', $trip->vehicle_id)
-                ->where('id', '!=', $trip->id)
-                ->where($overlapCondition)
-                ->exists()) {
+            $vehicleConflict = self::where('vehicle_id', $trip->vehicle_id)
+                                   ->where('id', '!=', $trip->getKey())
+                                   ->where($overlapCondition)
+                                   ->exists();
+
+            if ($vehicleConflict) {
                 throw ValidationException::withMessages([
                     'vehicle_id' => 'Vehicle has an overlapping trip.',
                 ]);
@@ -104,6 +115,24 @@ class Trip extends Model
             if ($trip->driver && $trip->vehicle && !$trip->driver->vehicles->contains($trip->vehicle)) {
                 throw ValidationException::withMessages([
                     'vehicle_id' => 'Vehicle must be assigned to the selected driver.',
+                ]);
+            }
+
+            if ($trip->driver && $trip->company_id && $trip->driver->company_id !== $trip->company_id) {
+                throw ValidationException::withMessages([
+                    'driver_id' => 'Driver must belong to the same company.',
+                ]);
+            }
+
+            if ($trip->vehicle && $trip->company_id && $trip->vehicle->company_id !== $trip->company_id) {
+                throw ValidationException::withMessages([
+                    'vehicle_id' => 'Vehicle must belong to the same company.',
+                ]);
+            }
+
+            if ($trip->client && $trip->company_id && $trip->client->company_id !== $trip->company_id) {
+                throw ValidationException::withMessages([
+                    'client_id' => 'Client must belong to the same company.',
                 ]);
             }
         });

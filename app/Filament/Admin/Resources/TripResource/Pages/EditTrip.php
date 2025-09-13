@@ -2,7 +2,7 @@
 
 namespace App\Filament\Admin\Resources\TripResource\Pages;
 
-use App\Filament\Admin\Resources\TripResource;
+use App\Filament\Admin\Resources\AdminTripResource;
 use App\Models\Driver;
 use App\Models\Trip;
 use Carbon\Carbon;
@@ -11,7 +11,7 @@ use Illuminate\Validation\ValidationException;
 
 class EditTrip extends EditRecord
 {
-    protected static string $resource = TripResource::class;
+    protected static string $resource = AdminTripResource::class;
 
     protected function mutateFormDataBeforeSave(array $data): array
     {

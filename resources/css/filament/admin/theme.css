@@ -25,3 +25,7 @@
 
 .fi-btn-label {
 color: blue;}
+
+.fi-select-arrow:not(:first-child) {
+    display: none !important;
+}

@@ -51,7 +51,6 @@ class CompanyPanelProvider extends PanelProvider
     SubstituteBindings::class,
     DisableBladeIconComponents::class,
     DispatchServingFilamentEvent::class,
-    \App\Http\Middleware\EnforceCompanyAccess::class, // Add your middleware here
 ])
             ->authMiddleware([
                 Authenticate::class,
@@ -59,4 +58,5 @@ class CompanyPanelProvider extends PanelProvider
             ->brandName('Company Admin Panel')
             ->favicon(asset('favicon.ico'));
     }
-}
+    
+}   

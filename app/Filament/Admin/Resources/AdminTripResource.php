@@ -17,7 +17,7 @@ use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Database\Eloquent\Builder;
 
-class TripResource extends Resource
+class AdminTripResource extends Resource
 {
     protected static ?string $model = Trip::class;
 

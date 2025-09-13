@@ -10,6 +10,7 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Database\Eloquent\Builder;
 
 class VehicleResource extends Resource
 {
@@ -22,7 +23,9 @@ class VehicleResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('name')->required()->maxLength(255),
+                Forms\Components\TextInput::make('name')
+                    ->required()
+                    ->maxLength(255),
                 Forms\Components\Select::make('vehicle_type')
                     ->options(['truck' => 'Truck', 'van' => 'Van', 'car' => 'Car'])
                     ->required(),
@@ -30,13 +33,15 @@ class VehicleResource extends Resource
                     ->required()
                     ->unique(ignoreRecord: true)
                     ->maxLength(20),
-                Forms\Components\DatePicker::make('last_maintenance'),
+                Forms\Components\DatePicker::make('last_maintenance')
+                    ->nullable(),
                 Forms\Components\Select::make('status')
                     ->options(['active' => 'Active', 'maintenance' => 'In Maintenance', 'inactive' => 'Inactive'])
                     ->required()
                     ->default('active'),
                 Forms\Components\Hidden::make('company_id')
-                    ->default(fn () => Auth::user()->company_id),
+                    ->default(fn () => Auth::user()->company_id)
+                    ->required(),
             ]);
     }
 
@@ -44,10 +49,16 @@ class VehicleResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('name')->searchable()->sortable(),
-                Tables\Columns\TextColumn::make('vehicle_type')->sortable(),
-                Tables\Columns\TextColumn::make('registration_number')->searchable(),
-                Tables\Columns\TextColumn::make('last_maintenance')->date()->sortable(),
+                Tables\Columns\TextColumn::make('name')
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('vehicle_type')
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('registration_number')
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('last_maintenance')
+                    ->date()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
@@ -81,7 +92,7 @@ class VehicleResource extends Resource
         ];
     }
 
-public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
             ->where('company_id', Auth::user()->company_id);

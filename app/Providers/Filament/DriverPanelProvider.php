@@ -16,8 +16,9 @@ use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\Facades\App;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
-
+use App\Filament\Driver\Widgets\DriverMonthlyTripsWidget;
 class DriverPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
@@ -34,7 +35,7 @@ class DriverPanelProvider extends PanelProvider
         \App\Filament\Driver\Resources\TripsResource::class,
         \App\Filament\Driver\Resources\DriverProfileResource::class,
     ])
-    ->colors(['primary' => Color::Amber])
+    ->colors(['primary' => Color::Purple])
             ->viteTheme('resources/css/filament/Driver/theme.css')
     ->pages([Pages\Dashboard::class])
     ->widgets([
@@ -55,7 +56,7 @@ class DriverPanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/Driver/Widgets'), for: 'App\\Filament\\Driver\\Widgets')
             ->widgets([
                 Widgets\AccountWidget::class,
-                // Widgets\FilamentInfoWidget::class,
+                \App\Filament\Driver\Widgets\DriverMonthlyTripsWidget::class,
             ])
             ->middleware([
                 EncryptCookies::class,

@@ -17,7 +17,7 @@ class DriverFactory extends Factory
             'name' => $this->faker->name,
             'phone' => $this->faker->phoneNumber,
             'email' => $this->faker->unique()->safeEmail,
-            'password' => static::$password ??= Hash::make('password123'),
+            'password' => static::$password ??= Hash::make('123'),
             'emergency_contact' => $this->faker->phoneNumber,
             'company_id' => Company::factory(),
 

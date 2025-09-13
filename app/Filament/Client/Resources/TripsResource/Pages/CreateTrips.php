@@ -3,10 +3,10 @@
 namespace App\Filament\Client\Resources\TripsResource\Pages;
 
 use App\Filament\Client\Resources\TripsResource;
-use App\Models\Driver;
 use App\Models\Trip;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
-use Illuminate\Validation\ValidationException;
+use Carbon\Carbon;
 
 class CreateTrips extends CreateRecord
 {
@@ -14,28 +14,46 @@ class CreateTrips extends CreateRecord
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        $data['client_id'] = auth('client')->id();
+        // ✅ Ensure client is logged in
+        $clientId = auth('client')->id();
+        if (!$clientId) {
+            Notification::make()
+                ->title('Unauthorized')
+                ->body('You must be logged in as a client to create a trip.')
+                ->danger()
+                ->send();
 
-        // Parse dates
-        $start = \Carbon\Carbon::parse($data['start_time']);
-        $end = \Carbon\Carbon::parse($data['end_time']);
-        $now = \Carbon\Carbon::now();
+            $this->halt(); // Stops form submission
+        }
+        $data['client_id'] = $clientId;
 
-        // Validate start_time: not more than 1 minute in the past
-        if ($start->isBefore($now->subMinute(1))) {
-            throw ValidationException::withMessages([
-                'start_time' => 'The start time cannot be more than 1 minute in the past.',
-            ]);
+        $start = Carbon::parse($data['start_time']);
+        $end   = Carbon::parse($data['end_time']);
+        $now   = now();
+
+        // ✅ Validate start_time: not more than 1 minute in the past
+        if ($start->lt((clone $now)->subMinute())) {
+            Notification::make()
+                ->title('Invalid Start Time')
+                ->body('The start time cannot be more than 1 minute in the past.')
+                ->danger()
+                ->send();
+
+            $this->halt();
         }
 
-        // Validate start_time: not more than 3 weeks in the future
-        if ($start->isAfter($now->addWeeks(3))) {
-            throw ValidationException::withMessages([
-                'start_time' => 'The start time cannot be more than 3 weeks in the future.',
-            ]);
+        // ✅ Validate start_time: not more than 3 weeks in the future
+        if ($start->gt((clone $now)->addWeeks(3))) {
+            Notification::make()
+                ->title('Invalid Start Time')
+                ->body('The start time cannot be more than 3 weeks in the future.')
+                ->danger()
+                ->send();
+
+            $this->halt();
         }
 
-        // Ensure no overlap
+        // ✅ Ensure no overlapping trips (driver OR vehicle)
         $conflict = Trip::where(function ($q) use ($data) {
                 $q->where('driver_id', $data['driver_id'])
                   ->orWhere('vehicle_id', $data['vehicle_id']);
@@ -51,11 +69,24 @@ class CreateTrips extends CreateRecord
             ->exists();
 
         if ($conflict) {
-            throw ValidationException::withMessages([
-                'start_time' => 'Driver or vehicle already booked in this time range.',
-            ]);
+            Notification::make()
+                ->title('Schedule Conflict')
+                ->body('Driver or vehicle is already booked during this time range.')
+                ->danger()
+                ->send();
+
+            $this->halt();
         }
 
-        return $data;
+        return $data; // ✅ Pass clean data to Filament so Trip::create($data) runs
+    }
+
+    protected function afterCreate(): void
+    {
+        Notification::make()
+            ->title('Trip Created')
+            ->body('Your trip has been successfully scheduled!')
+            ->success()
+            ->send();
     }
 }

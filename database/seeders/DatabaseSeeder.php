@@ -6,7 +6,11 @@ use Illuminate\Database\Seeder;
 use App\Models\{Company, Driver, Vehicle, Client, Trip, User};
 
 class DatabaseSeeder extends Seeder
+
 {
+
+
+    
     public function run(): void
     {
         $companies = Company::factory()->count(3)->create();
@@ -70,5 +74,7 @@ class DatabaseSeeder extends Seeder
                     ]);
             }
         }
+        
     }
+    
 }

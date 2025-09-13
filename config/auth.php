@@ -8,36 +8,47 @@ return [
     ],
 
     'guards' => [
-    'web' => [
-        'driver' => 'session',
-        'provider' => 'users',
-    ],
-    'client' => [
-        'driver' => 'session',
-        'provider' => 'clients',
-    ],
-    'driver' => [
-        'driver' => 'session',
-        'provider' => 'drivers',
-    ],
+        'web' => [
+            'driver' => 'session',
+            'provider' => 'users',
+        ],
 
+        'client' => [
+            'driver' => 'session',
+            'provider' => 'clients',
+        ],
 
+        'driver' => [
+            'driver' => 'session',
+            'provider' => 'drivers',
+        ],
+
+        'company' => [ // ✅ lowercase name
+            'driver' => 'session',
+            'provider' => 'companies',
+        ],
     ],
 
     'providers' => [
         'users' => [
             'driver' => 'eloquent',
-            'model'  => env('AUTH_MODEL', App\Models\User::class),
+            'model' => env('AUTH_MODEL', App\Models\User::class),
         ],
 
         'clients' => [
             'driver' => 'eloquent',
-            'model'  => App\Models\Client::class,
+            'model' => App\Models\Client::class,
         ],
-         'drivers' => [
-        'driver' => 'eloquent',
-        'model' => App\Models\Driver::class,
-    ],
+
+        'drivers' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Driver::class,
+        ],
+
+        'companies' => [ // ✅ new provider for company guard
+            'driver' => 'eloquent',
+            'model' => App\Models\Company::class,
+        ],
     ],
 
     'passwords' => [
@@ -54,12 +65,20 @@ return [
             'expire'   => 60,
             'throttle' => 60,
         ],
+
         'drivers' => [
-        'provider' => 'drivers',
-        'table' => 'password_reset_tokens',
-        'expire' => 60,
-        'throttle' => 60,
-    ],
+            'provider' => 'drivers',
+            'table'    => 'password_reset_tokens',
+            'expire'   => 60,
+            'throttle' => 60,
+        ],
+
+        'companies' => [ // ✅ add password reset config for companies if you want them to reset passwords
+            'provider' => 'companies',
+            'table'    => 'password_reset_tokens',
+            'expire'   => 60,
+            'throttle' => 60,
+        ],
     ],
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),

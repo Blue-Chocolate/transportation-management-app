@@ -7,10 +7,11 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
+use App\Models\Traits\BelongsToCompany;
 
 class User extends Authenticatable implements FilamentUser
 {
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, BelongsToCompany;
 
     protected $guarded = ['id'];
 
@@ -47,5 +48,18 @@ class User extends Authenticatable implements FilamentUser
             'company' => $this->role === 'admin' && !is_null($this->company_id),
             default => false,
         };
+    }
+
+    protected static function booted()
+    {
+        static::saving(function ($user) {
+            if (
+                !$user->company_id &&
+                \Illuminate\Support\Facades\Auth::check() &&
+                \Illuminate\Support\Facades\Auth::user()->company_id
+            ) {
+                $user->company_id = \Illuminate\Support\Facades\Auth::user()->company_id;
+            }
+        });
     }
 }

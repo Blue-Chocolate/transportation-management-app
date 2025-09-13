@@ -16,7 +16,7 @@ class ClientFactory extends Factory
             'name' => $this->faker->name,
             'email' => $this->faker->unique()->safeEmail,
             'phone' => $this->faker->phoneNumber,
-            'password' => static::$password ??= Hash::make('password123'),
+            'password' => static::$password ??= Hash::make('123'),
             'company_id' => Company::factory(),
         ];
     }

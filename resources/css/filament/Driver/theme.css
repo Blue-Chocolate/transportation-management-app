@@ -16,6 +16,8 @@
     --color-primary-900: 30 58 138;
   }
   } 
+
+
  
 .filament-app-layout header.filament-main-topbar {
     background-color: #FFB300; /* Primary amber */
@@ -34,8 +36,10 @@
 
 /* Sidebar */
 .filament-sidebar-nav {
-    background-color: #FFF8E1; /* Light amber */
-    border-right: 1px solid #FFB300;
+
+
+background-color: #1976d2; /* Blue primary for contrast */
+    border-right: 1px solid #000000;
 }
 
 /* Sidebar items */
@@ -46,7 +50,7 @@
     transition: all 0.3s ease;
 }
 .fi-sidebar-item:hover {
-    background-color: #FFECB3; /* subtle hover */
+    background-color: #1976d2; /* subtle hover */
     color: #FF6F00; /* darker amber */
 }
 
@@ -110,3 +114,14 @@
         --filament-primary-50: #0052b7;
      color: #0052b7;
 } 
+
+.fi-select-arrow {
+    display: none !important; /* Hide extras if needed */
+}
+.fi-select-arrow:first-child {
+    display: block; /* Show only the first */
+}
+
+.fi-select-arrow:not(:first-child) {
+    display: none !important;
+}
