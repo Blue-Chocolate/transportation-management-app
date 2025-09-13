@@ -19,6 +19,8 @@ class Driver extends Authenticatable implements FilamentUser
         'name',
         'phone',
         'email',
+                'user_id',
+
         'emergency_contact',
         'license',
         'license_expiration',

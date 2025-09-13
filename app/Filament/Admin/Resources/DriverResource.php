@@ -6,15 +6,16 @@ use App\Filament\Admin\Resources\DriverResource\Pages;
 use App\Models\Driver;
 use Filament\Forms;
 use Filament\Forms\Form;
-use Filament\Infolists;
 use Filament\Infolists\Infolist;
-use Filament\Resources\Resource;
-use Filament\Tables;
-use Filament\Tables\Table;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\ImageEntry;
 use Filament\Infolists\Components\IconEntry;
+use Filament\Resources\Resource;
+use Filament\Tables;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Cache;
 
 class DriverResource extends Resource
 {
@@ -22,6 +23,9 @@ class DriverResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-user';
     protected static ?string $navigationGroup = 'Operations';
 
+    // --------------------------------------
+    // Form Schema
+    // --------------------------------------
     public static function form(Form $form): Form
     {
         return $form
@@ -42,9 +46,7 @@ class DriverResource extends Resource
                 Forms\Components\FileUpload::make('profile_photo')->image(),
                 Forms\Components\TextInput::make('insurance_info'),
                 Forms\Components\Repeater::make('training_certifications')
-                    ->schema([
-                        Forms\Components\TextInput::make('certification'),
-                    ])
+                    ->schema([Forms\Components\TextInput::make('certification')])
                     ->nullable(),
                 Forms\Components\Toggle::make('medical_certified'),
                 Forms\Components\DatePicker::make('background_check_date'),
@@ -53,13 +55,14 @@ class DriverResource extends Resource
                     ->minValue(0)
                     ->maxValue(5),
                 Forms\Components\Repeater::make('route_assignments')
-                    ->schema([
-                        Forms\Components\TextInput::make('route'),
-                    ])
+                    ->schema([Forms\Components\TextInput::make('route')])
                     ->nullable(),
             ]);
     }
 
+    // --------------------------------------
+    // Table Schema
+    // --------------------------------------
     public static function table(Table $table): Table
     {
         return $table
@@ -78,7 +81,8 @@ class DriverResource extends Resource
                     ]),
             ])
             ->filters([
-                // Add filters if needed
+                Tables\Filters\SelectFilter::make('employment_status')
+                    ->options(['active' => 'Active', 'inactive' => 'Inactive']),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
@@ -90,6 +94,9 @@ class DriverResource extends Resource
             ]);
     }
 
+    // --------------------------------------
+    // Infolist Schema
+    // --------------------------------------
     public static function infolist(Infolist $infolist): Infolist
     {
         return $infolist
@@ -118,11 +125,10 @@ class DriverResource extends Resource
                     ->schema([
                         TextEntry::make('vehicles.name')
                             ->listWithLineBreaks()
-                            ->getStateUsing(function ($record) {
-                                return $record->vehicles()->pluck('name')->toArray();
-                            }),
-                        TextEntry::make('route_assignments')
-                            ->listWithLineBreaks(),
+                            ->getStateUsing(fn ($record) =>
+                                $record->vehicles->pluck('name')->toArray()
+                            ),
+                        TextEntry::make('route_assignments')->listWithLineBreaks(),
                         TextEntry::make('performance_rating')->suffix('/5.00'),
                         IconEntry::make('medical_certified')
                             ->boolean()
@@ -136,13 +142,15 @@ class DriverResource extends Resource
                     ->columns(2)
                     ->schema([
                         TextEntry::make('insurance_info'),
-                        TextEntry::make('training_certifications')
-                            ->listWithLineBreaks(),
+                        TextEntry::make('training_certifications')->listWithLineBreaks(),
                         TextEntry::make('notes')->markdown(),
                     ]),
             ]);
     }
 
+    // --------------------------------------
+    // Relations
+    // --------------------------------------
     public static function getRelations(): array
     {
         return [
@@ -150,6 +158,46 @@ class DriverResource extends Resource
         ];
     }
 
+    // --------------------------------------
+    // Eloquent Query Optimization + Redis Caching
+    // --------------------------------------
+    public static function getEloquentQuery(): Builder
+    {
+        $user = auth()->user();
+        $userId = $user ? $user->id : 0;
+
+        $driverIds = Cache::store('redis')->remember("driver_ids_user_{$userId}", now()->addSeconds(30), function () use ($userId) {
+            return Driver::where('user_id', $userId)->pluck('id')->toArray();
+        });
+
+        if (empty($driverIds)) {
+            return Driver::query()->whereRaw('1 = 0');
+        }
+
+        return Driver::query()
+            ->with(['vehicles'])
+            ->whereIn('id', $driverIds)
+            ->orderBy('name', 'asc');
+    }
+
+    // --------------------------------------
+    // Auto-fill user_id
+    // --------------------------------------
+    public static function mutateFormDataBeforeCreate(array $data): array
+    {
+        $data['user_id'] = auth()->user()->id;
+        return $data;
+    }
+
+    public static function mutateFormDataBeforeSave(array $data): array
+    {
+        $data['user_id'] = auth()->user()->id;
+        return $data;
+    }
+
+    // --------------------------------------
+    // Pages
+    // --------------------------------------
     public static function getPages(): array
     {
         return [

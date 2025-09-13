@@ -11,14 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('vehicles', function (Blueprint $table) {
+Schema::create('vehicles', function (Blueprint $table) {
     $table->id();
-    $table->string('name'); // e.g., "Truck A"
+    $table->string('name');
     $table->string('registration_number')->nullable();
-    $table->enum('vehicle_type', ['car', 'van', 'truck' , 'bus'])->default('car'); // denormalized for quick filtering
+    $table->enum('vehicle_type', ['car', 'van', 'truck', 'bus'])->default('car');
+    $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+    $table->softDeletes();
     $table->timestamps();
-    $table->softDeletes(); 
 });
+
 
     }
 

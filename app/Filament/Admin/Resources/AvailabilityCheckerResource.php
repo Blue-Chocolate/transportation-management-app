@@ -21,7 +21,7 @@ class AvailabilityCheckerResource extends Resource
 {
     protected static ?string $model = Driver::class;
     protected static ?string $navigationIcon = 'heroicon-o-users';
-    protected static ?string $navigationLabel = 'Availability Checker';
+    protected static ?string $navigationLabel = 'Driver Availability Checker';
     protected static ?string $navigationGroup = 'Operations';
     protected static ?int $navigationSort = 3;
 

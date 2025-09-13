@@ -2,46 +2,48 @@
 
 namespace Database\Factories;
 
-use App\Models\Trip;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use App\Models\{Client, Driver, Vehicle, User};
 
 class TripFactory extends Factory
 {
-    protected $model = Trip::class;
+    protected $model = \App\Models\Trip::class;
 
     public function definition(): array
     {
-        $start = $this->faker->dateTimeBetween('-1 month', '+1 month');
-        $end   = (clone $start)->modify('+'.rand(1,8).' hours');
+        $startTime = $this->faker->dateTimeBetween('-1 month', '+1 month');
+        $endTime = (clone $startTime)->modify('+' . $this->faker->numberBetween(1, 24) . ' hours');
 
         return [
-            'start_time'   => $start,
-            'end_time'     => $end,
-            'description'  => $this->faker->sentence,
-            'status'       => $this->faker->randomElement(['planned', 'active', 'completed', 'cancelled']),
+            'client_id'     => null, // Optional, can be set later
+            'driver_id'     => null, // To be injected
+            'vehicle_id'    => null, // To be injected
+            'user_id'       => null, // To be injected
+            'vehicle_type'  => $this->faker->randomElement(['car', 'van', 'truck', 'bus']),
+            'start_time'    => $startTime,
+            'end_time'      => $endTime,
+            'description'   => $this->faker->sentence(),
+            'status'        => $this->faker->randomElement(['planned', 'active', 'completed', 'cancelled']),
         ];
     }
 
-    public function forDriverAndVehicle($driver, $vehicle): self
+    public function forUser($userId): static
     {
-        return $this->state(function () use ($driver, $vehicle) {
-            $start = $this->faker->dateTimeBetween('-1 month', '+1 month');
-            $end   = (clone $start)->modify('+'.rand(1,8).' hours');
-
-            return [
-                'driver_id'    => $driver->id,
-                'vehicle_id'   => $vehicle->id,
-                'vehicle_type' => $vehicle->vehicle_type, // ✅ مهم جدًا
-            ];
-        });
+        return $this->state(fn () => ['user_id' => $userId]);
     }
 
-    public function forClient($client): self
+    public function withDriver($driverId): static
     {
-        return $this->state(function () use ($client) {
-            return [
-                'client_id' => $client->id,
-            ];
-        });
+        return $this->state(fn () => ['driver_id' => $driverId]);
+    }
+
+    public function withVehicle($vehicleId): static
+    {
+        return $this->state(fn () => ['vehicle_id' => $vehicleId]);
+    }
+
+    public function withClient($clientId): static
+    {
+        return $this->state(fn () => ['client_id' => $clientId]);
     }
 }

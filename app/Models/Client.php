@@ -40,6 +40,7 @@ class Client extends Authenticatable implements FilamentUser
         'email',
         'phone',
         'password',
+        'user_id',
     ];
 
     /**

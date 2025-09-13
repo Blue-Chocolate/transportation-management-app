@@ -11,15 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('driver_vehicle', function (Blueprint $table) {
+  Schema::create('driver_vehicle', function (Blueprint $table) {
     $table->id();
     $table->foreignId('driver_id')->constrained()->cascadeOnDelete();
     $table->foreignId('vehicle_id')->constrained()->cascadeOnDelete();
+    $table->foreignId('user_id')->constrained('users')->cascadeOnDelete(); // required
     $table->timestamps();
-    
-    // Prevent duplicate assignments
+
+    // Prevent duplicates
     $table->unique(['driver_id', 'vehicle_id']);
-    });
+});
+
+
     }
 
     /**

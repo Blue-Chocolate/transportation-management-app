@@ -45,8 +45,10 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
-    public function canAccessPanel(\Filament\Panel $panel): bool
-{
-    return $panel->getId() === 'admin';
-}
+ 
+ public function canAccessPanel(\Filament\Panel $panel): bool
+    {
+        // Allow access only if user has admin role and company_id
+        return $this->role === 'admin' && !empty($this->company_id);
+    }
 }

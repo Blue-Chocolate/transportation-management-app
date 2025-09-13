@@ -9,6 +9,8 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Cache;
 
 class VehicleResource extends Resource
 {
@@ -51,6 +53,36 @@ class VehicleResource extends Resource
     public static function getRelations(): array
     {
         return [];
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        $user = auth()->user();
+        $userId = $user ? $user->id : 0;
+
+        $vehicleIds = Cache::store('redis')->remember("vehicle_ids_user_{$userId}", now()->addSeconds(30), function () use ($userId) {
+            return Vehicle::where('user_id', $userId)->pluck('id')->toArray();
+        });
+
+        if (empty($vehicleIds)) {
+            return Vehicle::query()->whereRaw('1 = 0');
+        }
+
+        return Vehicle::query()
+            ->whereIn('id', $vehicleIds)
+            ->orderBy('name', 'asc');
+    }
+
+    public static function mutateFormDataBeforeCreate(array $data): array
+    {
+        $data['user_id'] = auth()->user()->id;
+        return $data;
+    }
+
+    public static function mutateFormDataBeforeSave(array $data): array
+    {
+        $data['user_id'] = auth()->user()->id;
+        return $data;
     }
 
     public static function getPages(): array

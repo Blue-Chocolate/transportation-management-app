@@ -2,9 +2,9 @@
 
 namespace App\Filament\Driver\Resources;
 
+use App\Enums\TripStatus;
 use App\Filament\Driver\Resources\TripsResource\Pages;
 use App\Models\Trip;
-use App\Enums\TripStatus;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -30,7 +30,7 @@ class TripsResource extends Resource
                 ->native(false),
         ]);
     }
-    
+
     public static function table(Table $table): Table
     {
         return $table
@@ -45,14 +45,14 @@ class TripsResource extends Resource
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
-                    ->options(TripStatus::class),
+                    ->options(TripStatus::options()), // Fixed: Use TripStatus::options()
             ])
             ->actions([
                 Tables\Actions\Action::make('update_status')
                     ->label('Update Status')
                     ->form([
                         Forms\Components\Select::make('status')
-                            ->options(TripStatus::class)
+                            ->options(TripStatus::options()) // Fixed: Use TripStatus::options()
                             ->required(),
                     ])
                     ->action(function (Trip $record, array $data): void {
@@ -63,9 +63,6 @@ class TripsResource extends Resource
             ]);
     }
 
-    /**
-     * Scope trips to the logged-in driver + eager-load relations
-     */
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
@@ -77,7 +74,7 @@ class TripsResource extends Resource
     {
         return [
             'index' => Pages\ListTrips::route('/'),
-            // 🚫 removed Edit page for drivers
+            // Edit page is intentionally omitted as per your comment
         ];
     }
 }

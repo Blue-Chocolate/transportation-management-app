@@ -5,78 +5,125 @@ namespace App\Filament\Admin\Resources\TripResource\Pages;
 use App\Filament\Admin\Resources\TripResource;
 use App\Models\Driver;
 use App\Models\Trip;
+use App\Models\Client;
+use App\Models\Vehicle;
 use Carbon\Carbon;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Validation\ValidationException;
-use Throwable;
+use Illuminate\Support\Facades\Log;
 
 class CreateTrip extends CreateRecord
 {
     protected static string $resource = TripResource::class;
 
-    protected function mutateFormDataBeforeCreate(array $data): array
+    public function mount(): void
     {
-        try {
-            $start = Carbon::parse($data['start_time']);
-            $end = Carbon::parse($data['end_time']);
+        Log::info('CreateTrip: Form mounted');
+        parent::mount();
+    }
 
-            if ($end->lte($start)) {
-                throw ValidationException::withMessages([
-                    'end_time' => 'End time must be after start time.',
-                ]);
-            }
+    public function hasForm(): bool
+    {
+        $hasForm = parent::hasForm();
+        Log::info('CreateTrip: hasForm checked', ['has_form' => $hasForm]);
+        return $hasForm;
+    }
 
-            // Check if driver exists
-            $driver = Driver::find($data['driver_id']);
-            if (! $driver) {
-                throw ValidationException::withMessages([
-                    'driver_id' => 'Selected driver does not exist.',
-                ]);
-            }
+    public function getFormState(): array
+    {
+        $state = parent::getFormState();
+        Log::info('CreateTrip: Form state retrieved', ['state_keys' => array_keys($state)]);
+        return $state;
+    }
 
-            // Check vehicle belongs to driver
-            if (! $driver->vehicles()->where('vehicle_id', $data['vehicle_id'])->exists()) {
-                throw ValidationException::withMessages([
-                    'vehicle_id' => 'This vehicle is not assigned to the selected driver.',
-                ]);
-            }
+  protected function mutateFormDataBeforeCreate(array $data): array
+{
+    Log::info('mutateFormDataBeforeCreate: Processing data', ['data' => $data]);
 
-            // Check overlap conflicts for driver or vehicle
-            $conflict = Trip::where(function ($q) use ($data) {
-                    $q->where('driver_id', $data['driver_id'])
-                      ->orWhere('vehicle_id', $data['vehicle_id']);
-                })
-                ->where('start_time', '<', $end)
-                ->where('end_time', '>', $start)
-                ->exists();
+    $data['user_id'] = auth()->id();
 
-            if ($conflict) {
-                throw ValidationException::withMessages([
-                    'start_time' => 'Driver or vehicle already booked in this time range. Please choose a different time, driver, or vehicle.',
-                ]);
-            }
+    $start = Carbon::parse($data['start_time']);
+    $end = Carbon::parse($data['end_time']);
 
-            return $data;
-        } catch (ValidationException $e) {
-            // Filament will handle ValidationException and display field-specific errors
-            throw $e;
-        } catch (Throwable $e) {
-            // Catch any unexpected errors and notify the admin
-            Notification::make()
-                ->title('Error Creating Trip')
-                ->danger()
-                ->body('An unexpected error occurred: ' . $e->getMessage())
-                ->persistent()
-                ->send();
-
-            // Log the error (optional, if you have logging set up)
-            // \Log::error('Trip creation error: ' . $e->getMessage());
-
-            // Rethrow to prevent creation
+    // 1️⃣ Validate end time
+    if ($end->lte($start)) {
+        throw ValidationException::withMessages([
+            'end_time' => 'End time must be after start time.',
+        ]);
+    }
+      if (Carbon::parse($data['end_time'])->lte(Carbon::parse($data['start_time']))) {
             throw ValidationException::withMessages([
-                'general' => 'An unexpected error occurred. Please try again or contact support.',
+                'end_time' => 'End time must be after start time.',
             ]);
+        }
+    // 2️⃣ Validate client, driver, vehicle existence
+    $client = Client::where('user_id', $data['user_id'])->find($data['client_id']);
+    $driver = Driver::where('user_id', $data['user_id'])->find($data['driver_id']);
+    $vehicle = Vehicle::where('user_id', $data['user_id'])->find($data['vehicle_id']);
+
+    if (! $client) {
+        throw ValidationException::withMessages(['client_id' => 'Invalid client.']);
+    }
+    if (! $driver) {
+        throw ValidationException::withMessages(['driver_id' => 'Invalid driver.']);
+    }
+    if (! $vehicle) {
+        throw ValidationException::withMessages(['vehicle_id' => 'Invalid vehicle.']);
+    }
+
+    // 3️⃣ Check driver-vehicle assignment
+    if (! $driver->vehicles()->where('vehicles.id', $vehicle->id)->exists()) {
+        throw ValidationException::withMessages(['vehicle_id' => 'Vehicle not assigned to driver.']);
+    }
+
+    $data['vehicle_type'] = $vehicle->vehicle_type;
+
+    // 4️⃣ Check overlapping trips
+    $conflict = Trip::where('user_id', $data['user_id'])
+        ->where(function ($q) use ($driver, $vehicle) {
+            $q->where('driver_id', $driver->id)
+              ->orWhere('vehicle_id', $vehicle->id);
+        })
+        ->where(function ($q) use ($start, $end) {
+            $q->where(function ($q2) use ($start, $end) {
+                $q2->where('start_time', '<', $end)
+                   ->where('end_time', '>', $start);
+            });
+        })
+        ->exists();
+
+    if ($conflict) {
+        throw ValidationException::withMessages([
+            'start_time' => 'Driver or vehicle already booked in this time range.',
+        ]);
+    }
+
+    // 5️⃣ Validate status
+    if (! in_array($data['status'], array_column(\App\Enums\TripStatus::cases(), 'value'))) {
+        throw ValidationException::withMessages(['status' => 'Invalid trip status.']);
+    }
+
+    Log::info('mutateFormDataBeforeCreate: Data validated successfully', ['data' => $data]);
+    return $data;
+}
+
+
+
+    protected function handleRecordCreation(array $data): \Illuminate\Database\Eloquent\Model
+    {
+        Log::info('handleRecordCreation: Attempting to create trip with Tinker-like data', ['data' => $data]);
+        try {
+            $record = static::getModel()::create($data);
+            Log::info('handleRecordCreation: Trip created successfully (matches Tinker)', ['id' => $record->id, 'data' => $record->toArray()]);
+            return $record;
+        } catch (\Throwable $e) {
+            Log::error('handleRecordCreation: Failed to create trip (DB/Model error)', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'data' => $data
+            ]);
+            throw $e;
         }
     }
 }

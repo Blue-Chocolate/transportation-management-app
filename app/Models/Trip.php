@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\ValidationException;
+use Carbon\Carbon;
 
 class Trip extends Model
 {
@@ -21,15 +22,14 @@ class Trip extends Model
         'end_time',
         'description',
         'status',
+        'user_id',
     ];
 
     protected $casts = [
         'start_time' => 'datetime',
-        'end_time' => 'datetime',
-        'status' => TripStatus::class,
+        'end_time'   => 'datetime',
+        'status'     => TripStatus::class,
     ];
-
-    
 
     public function client()
     {
@@ -48,23 +48,39 @@ class Trip extends Model
 
     protected static function booted()
     {
-        static::saving(function ($trip) {
+        // Run before creating a new model (once)
+        static::creating(function (Trip $trip) {
+            // Automatically fill vehicle_type based on vehicle_id if not set
+            if ($trip->vehicle_id && empty($trip->vehicle_type)) {
+                $vehicle = Vehicle::find($trip->vehicle_id);
+                if ($vehicle) {
+                    $trip->vehicle_type = $vehicle->vehicle_type;
+                }
+            }
+        });
+
+        // Run on both creating & updating
+        static::saving(function (Trip $trip) {
+            // Ensure start_time and end_time are Carbon instances
+            $start = $trip->start_time instanceof Carbon ? $trip->start_time : Carbon::parse($trip->start_time);
+            $end   = $trip->end_time instanceof Carbon ? $trip->end_time : Carbon::parse($trip->end_time);
+
             // Validate end_time > start_time
-            if ($trip->end_time <= $trip->start_time) {
+            if ($end->lte($start)) {
                 throw ValidationException::withMessages([
                     'end_time' => 'End time must be after start time.',
                 ]);
             }
 
-            // Check for driver overlap
+            // Driver overlapping trips
             $driverConflict = self::where('driver_id', $trip->driver_id)
-                ->where('id', '!=', $trip->id)
-                ->where(function ($query) use ($trip) {
-                    $query->whereBetween('start_time', [$trip->start_time, $trip->end_time])
-                          ->orWhereBetween('end_time', [$trip->start_time, $trip->end_time])
-                          ->orWhere(function ($q) use ($trip) {
-                              $q->where('start_time', '<=', $trip->start_time)
-                                ->where('end_time', '>=', $trip->end_time);
+                ->where('id', '!=', $trip->id ?? 0)
+                ->where(function ($query) use ($start, $end) {
+                    $query->whereBetween('start_time', [$start, $end])
+                          ->orWhereBetween('end_time', [$start, $end])
+                          ->orWhere(function ($q) use ($start, $end) {
+                              $q->where('start_time', '<=', $start)
+                                ->where('end_time', '>=', $end);
                           });
                 })
                 ->exists();
@@ -75,15 +91,15 @@ class Trip extends Model
                 ]);
             }
 
-            // Check for vehicle overlap
+            // Vehicle overlapping trips
             $vehicleConflict = self::where('vehicle_id', $trip->vehicle_id)
-                ->where('id', '!=', $trip->id)
-                ->where(function ($query) use ($trip) {
-                    $query->whereBetween('start_time', [$trip->start_time, $trip->end_time])
-                          ->orWhereBetween('end_time', [$trip->start_time, $trip->end_time])
-                          ->orWhere(function ($q) use ($trip) {
-                              $q->where('start_time', '<=', $trip->start_time)
-                                ->where('end_time', '>=', $trip->end_time);
+                ->where('id', '!=', $trip->id ?? 0)
+                ->where(function ($query) use ($start, $end) {
+                    $query->whereBetween('start_time', [$start, $end])
+                          ->orWhereBetween('end_time', [$start, $end])
+                          ->orWhere(function ($q) use ($start, $end) {
+                              $q->where('start_time', '<=', $start)
+                                ->where('end_time', '>=', $end);
                           });
                 })
                 ->exists();
@@ -94,9 +110,10 @@ class Trip extends Model
                 ]);
             }
 
-            // Sync vehicle_type with vehicle
+            // Sync vehicle_type with related vehicle (use existing relation if loaded)
             if ($trip->vehicle) {
-                $trip->vehicle_type = $trip->vehicle->type;
+                // Make sure to use the correct property name 'vehicle_type'
+                $trip->vehicle_type = $trip->vehicle->vehicle_type;
             }
         });
     }

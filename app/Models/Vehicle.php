@@ -14,6 +14,8 @@ class Vehicle extends Model
         'name',
         'registration_number',
         'vehicle_type',
+                'user_id',
+
     ];
 
    

@@ -9,7 +9,6 @@ export default defineConfig({
         'resources/js/app.js',
         'resources/css/filament/Admin/theme.css',
         'resources/css/filament/Driver/theme.css',
-        '/public/css/filament/Driver/theme.css'
       ],
       refresh: true,
     }),

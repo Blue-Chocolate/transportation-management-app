@@ -2,46 +2,60 @@
 
 namespace Database\Seeders;
 
-use App\Models\{Driver, Vehicle, Client, Trip};
 use Illuminate\Database\Seeder;
-use App\Models\User;
+use App\Models\{Driver, Vehicle, Client, Trip, User};
 
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // 1️⃣ Create vehicles
-        $vehicles = Vehicle::factory()->count(15)->create();
+        // Create an admin user
+        $admin = \App\Models\User::factory()->admin()->create([
+            'name' => 'Admin User',
+            'email' => 'admin@example.com',
+        ]);
 
-        // 2️⃣ Create drivers
-        $drivers = Driver::factory()->count(10)->create();
+        // Create 3 additional regular users
+        $users = User::factory()->count(5)->create([
+            'role' => 'user',
+        ]);
+        $users->prepend($admin); // Include admin in the users collection for seeding
 
-        // 3️⃣ Create clients
-        $clients = Client::factory()->count(5)->create();
+        // Seed data for each user
+        foreach ($users as $user) {
+            // Create 5 clients for the user
+            Client::factory(5)->forUser($user->id)->create();
 
-        // 4️⃣ Assign 1-3 vehicles to each driver and create trips
-        foreach ($drivers as $driver) {
-            $assignedVehicles = $vehicles->random(rand(1, 3));
-            $driver->vehicles()->sync($assignedVehicles->pluck('id'));
+            // Create 5 drivers for the user
+            $drivers = Driver::factory(5)->forUser($user->id)->create();
 
-            foreach (range(1, 5) as $i) {
-                $vehicle = $assignedVehicles->random();
-                $client  = $clients->random();
+            // Create 5 vehicles for the user
+            $vehicles = Vehicle::factory(5)->forUser($user->id)->create();
 
-                Trip::factory()->forDriverAndVehicle($driver, $vehicle)->create([
-                    'driver_id'    => $driver->id,
-                    'vehicle_id'   => $vehicle->id,
-                    'vehicle_type' => $vehicle->vehicle_type, // ✅ ضروري
-                    'client_id'    => $client->id,
-                ]);
+            // Assign drivers to vehicles (pivot table) with user_id
+            foreach ($drivers as $driver) {
+                $selectedVehicles = $vehicles->random(rand(1, 3));
+                foreach ($selectedVehicles as $vehicle) {
+                    \DB::table('driver_vehicle')->insert([
+                        'driver_id' => $driver->id,
+                        'vehicle_id' => $vehicle->id,
+                        'user_id' => $user->id,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+            }
+
+            // Create 10 trips for the user, assigning random drivers, vehicles, and optional clients
+            $clients = Client::where('user_id', $user->id)->get();
+            foreach (range(1, 10) as $i) {
+                Trip::factory()
+                    ->forUser($user->id)
+                    ->withDriver($drivers->random()->id)
+                    ->withVehicle($vehicles->random()->id)
+                    ->withClient($clients->isNotEmpty() ? $clients->random()->id : null)
+                    ->create();
             }
         }
-
-        // 5️⃣ Create admin user
-        User::factory()->create([
-            'name'  => 'Admin User',
-            'email' => 'admin@example.com',
-            'role'  => 'admin',
-        ]);
     }
 }
