@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 namespace App\Services;
 
@@ -144,7 +144,7 @@ class TripValidationService
         Log::info('TripValidationService: Checking driver employment status', [
             'driver_id' => $driver->id,
             'employment_status' => $driver->employment_status,
-            'employment_status_type' => get_class($driver->employment_status)
+            'employment_status_type' => is_object($driver->employment_status) ? get_class($driver->employment_status) : gettype($driver->employment_status)
         ]);
 
         if (!$this->isDriverActive($driver)) {
@@ -171,7 +171,7 @@ class TripValidationService
         Log::info('TripValidationService: Checking if driver is active', [
             'status' => $status,
             'is_enum' => $status instanceof EmploymentStatus,
-            'status_class' => get_class($status)
+            'status_type' => is_object($status) ? get_class($status) : gettype($status)
         ]);
         
         // Handle enum case

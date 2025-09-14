@@ -219,6 +219,7 @@ class TripResource extends Resource
                             
                             if ($driverId && $endTime) {
                                 self::checkDriverOverlaps($driverId, $state, $endTime);
+                          
                             }
                             
                             if ($vehicleId && $endTime) {

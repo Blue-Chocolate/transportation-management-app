@@ -30,19 +30,39 @@ class TripsResource extends Resource
                     ->default(fn () => auth('client')->id())
                     ->required(),
 
-                // driver select
+                // driver select - only drivers related to the client's user_id
                 Forms\Components\Select::make('driver_id')
                     ->label('Driver')
-                    ->relationship('driver', 'name')
+                    ->relationship(
+                        'driver', 
+                        'name',
+                        fn (Builder $query) => $query->where('user_id', auth('client')->user()->user_id)
+                    )
                     ->required()
-                    ->preload(),
+                    ->preload()
+                    ->reactive()
+                    ->afterStateUpdated(fn (callable $set) => $set('vehicle_id', null)), // Reset vehicle when driver changes
 
-                // vehicle select
+                // vehicle select - only vehicles assigned to the selected driver
                 Forms\Components\Select::make('vehicle_id')
                     ->label('Vehicle')
-                    ->relationship('vehicle', 'name')
+                    ->options(function (callable $get) {
+                        $driverId = $get('driver_id');
+                        if (!$driverId) {
+                            return [];
+                        }
+                        
+                        // Get vehicles assigned to the selected driver through pivot table
+                        // Specify the table name to avoid ambiguous column reference
+                        return Driver::find($driverId)
+                            ->vehicles()
+                            ->select('vehicles.id', 'vehicles.name')
+                            ->pluck('vehicles.name', 'vehicles.id')
+                            ->toArray();
+                    })
                     ->required()
-                    ->preload(),
+                    ->disabled(fn (callable $get) => !$get('driver_id'))
+                    ->helperText('Please select a driver first to see available vehicles'),
 
                 Forms\Components\DateTimePicker::make('start_time')
                     ->required()
@@ -77,15 +97,24 @@ class TripsResource extends Resource
                 Tables\Columns\TextColumn::make('description')->limit(50),
                 Tables\Columns\BadgeColumn::make('status')
                     ->colors(TripStatus::colors())
-->formatStateUsing(fn ($state) => 
-    $state instanceof TripStatus 
-        ? $state->getLabel() 
-        : TripStatus::from($state)->getLabel()
-),            ])
+                    ->formatStateUsing(fn ($state) => 
+                        $state instanceof TripStatus 
+                            ? $state->getLabel() 
+                            : TripStatus::from($state)->getLabel()
+                    ),
+            ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->options(TripStatus::options())
                     ->default(TripStatus::PLANNED->value),
+                    
+                Tables\Filters\SelectFilter::make('driver_id')
+                    ->label('Driver')
+                    ->relationship(
+                        'driver', 
+                        'name',
+                        fn (Builder $query) => $query->where('user_id', auth('client')->user()->user_id)
+                    ),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
@@ -101,8 +130,12 @@ class TripsResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         // limit trips to the logged-in client only
+        // and ensure drivers belong to the client's user_id
         return parent::getEloquentQuery()
             ->where('client_id', auth('client')->id())
+            ->whereHas('driver', function (Builder $query) {
+                $query->where('user_id', auth('client')->user()->user_id);
+            })
             ->with(['driver', 'vehicle']);
     }
 

@@ -3,6 +3,7 @@
 use App\Models\Driver;
 
 it('driver factory creates a valid driver', function () {
+    expect(true)->toBeTrue();
     $driver = Driver::factory()->create();
     expect($driver)->toBeInstanceOf(Driver::class)
         ->and($driver->name)->not()->toBeEmpty()

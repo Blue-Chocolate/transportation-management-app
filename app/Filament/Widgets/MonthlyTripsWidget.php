@@ -7,19 +7,25 @@ use App\Enums\TripStatus;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 
 class MonthlyTripsWidget extends BaseWidget
 {
     protected function getStats(): array
     {
-        $completedThisMonth = Cache::remember('monthly_completed_trips_widget', now()->addMinutes(5), function () {
+        $userId = Auth::id();
+        $cacheKey = 'monthly_completed_trips_widget_' . $userId;
+
+        $completedThisMonth = Cache::remember($cacheKey, now()->addMinutes(5), function () use ($userId) {
             $startOfMonth = Carbon::now()->startOfMonth();
+            $endOfMonth = Carbon::now()->endOfMonth();
 
             return Trip::query()
+                ->where('user_id', $userId)
                 ->where('status', TripStatus::COMPLETED->value)
                 ->where('end_time', '>=', $startOfMonth)
-                ->where('end_time', '<=', now())
+                ->where('end_time', '<=', $endOfMonth)
                 ->count();
         });
 

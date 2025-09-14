@@ -6,7 +6,7 @@ use App\Models\Trip;
 use App\Enums\TripStatus;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
-use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
@@ -14,19 +14,34 @@ class ActiveTripsWidget extends BaseWidget
 {
     protected function getStats(): array
     {
-        $activeTrips = Cache::remember('active_trips_widget', now()->addMinutes(1), function () {
+        $userId = Auth::id();
+        $cacheKey = 'active_trips_widget_' . $userId;
+
+        $counts = Cache::remember($cacheKey, now()->addMinutes(1), function () use ($userId) {
             return Trip::query()
-                ->where('status', TripStatus::ACTIVE->value)
-                ->where('start_time', '<=', now())
-                ->where('end_time', '>=', now())
-                ->count();
+                ->where('user_id', $userId)
+                ->groupBy('status')
+                ->select('status', DB::raw('count(*) as total'))
+                ->pluck('total', 'status')
+                ->toArray();
         });
 
-        return [
-            Stat::make('Active Trips', $activeTrips)
-                ->description('Trips currently in progress')
+        $colors = array_flip(TripStatus::colors());
+
+        $stats = [];
+
+        foreach (TripStatus::cases() as $statusEnum) {
+            $status = $statusEnum->value;
+            $count = $counts[$status] ?? 0;
+            $label = $statusEnum->getLabel();
+            $color = $colors[$status] ?? 'gray';
+
+            $stats[] = Stat::make($label . ' Trips', $count)
+                ->description('Total ' . strtolower($label) . ' trips')
                 ->icon('heroicon-o-truck')
-                ->color('warning'),
-        ];
+                ->color($color);
+        }
+
+        return $stats;
     }
 }
