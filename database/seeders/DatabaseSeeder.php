@@ -2,60 +2,85 @@
 
 namespace Database\Seeders;
 
+use App\Models\User;
+use App\Models\{Client, Driver, Vehicle, Trip};
 use Illuminate\Database\Seeder;
-use App\Models\{Driver, Vehicle, Client, Trip, User};
+// use App\Factories\TripFactory;
 
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // Create an admin user
-        $admin = \App\Models\User::factory()->admin()->create([
-            'name' => 'Admin User',
-            'email' => 'admin@example.com',
+        // Reset trip time tracking
+        // TripFactory::resetTimeTracking();
+        
+        // Create companies (admin users)
+        $company1 = User::factory()->admin()->create([
+            'name' => 'TransCorp Solutions',
+            'email' => 'admin@transcorp.com'
         ]);
-
-        // Create 3 additional regular users
-        $users = User::factory()->count(5)->create([
-            'role' => 'user',
+        
+        $company2 = User::factory()->admin()->create([
+            'name' => 'City Transport Co',
+            'email' => 'admin@citytransport.com'
         ]);
-        $users->prepend($admin); // Include admin in the users collection for seeding
-
-        // Seed data for each user
-        foreach ($users as $user) {
-            // Create 5 clients for the user
-            Client::factory(5)->forUser($user->id)->create();
-
-            // Create 5 drivers for the user
-            $drivers = Driver::factory(5)->forUser($user->id)->create();
-
-            // Create 5 vehicles for the user
-            $vehicles = Vehicle::factory(5)->forUser($user->id)->create();
-
-            // Assign drivers to vehicles (pivot table) with user_id
-            foreach ($drivers as $driver) {
-                $selectedVehicles = $vehicles->random(rand(1, 3));
-                foreach ($selectedVehicles as $vehicle) {
-                    \DB::table('driver_vehicle')->insert([
-                        'driver_id' => $driver->id,
-                        'vehicle_id' => $vehicle->id,
-                        'user_id' => $user->id,
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
-                }
-            }
-
-            // Create 10 trips for the user, assigning random drivers, vehicles, and optional clients
-            $clients = Client::where('user_id', $user->id)->get();
-            foreach (range(1, 10) as $i) {
+        
+        // Create resources for Company 1
+        $this->seedCompanyData($company1, 'Company 1');
+        
+        // Create resources for Company 2  
+        $this->seedCompanyData($company2, 'Company 2');
+        
+        $this->command->info('Database seeded successfully with non-overlapping trips!');
+    }
+    
+    private function seedCompanyData(User $company, string $companyName): void
+    {
+        $this->command->info("Seeding data for {$companyName}...");
+        
+        // Create clients for this company
+        $clients = Client::factory()->count(5)->forUser($company->id)->create();
+        
+        // Create drivers for this company
+        $drivers = Driver::factory()->count(3)->forUser($company->id)->create();
+        
+        // Create vehicles for this company
+        $vehicles = Vehicle::factory()->count(4)->forUser($company->id)->create();
+        
+        // Assign vehicles to drivers (many-to-many relationship)
+        foreach ($drivers as $driver) {
+            $assignedVehicles = $vehicles->random($this->faker->numberBetween(1, 2));
+            $driver->vehicles()->attach(
+                $assignedVehicles->pluck('id'),
+                ['user_id' => $company->id]
+            );
+        }
+        
+        // Create non-overlapping trips
+        foreach ($drivers as $driver) {
+            $driverVehicles = $driver->vehicles;
+            
+            for ($i = 0; $i < 3; $i++) { // 3 trips per driver
+                $vehicle = $driverVehicles->random();
+                $client = $clients->random();
+                
                 Trip::factory()
-                    ->forUser($user->id)
-                    ->withDriver($drivers->random()->id)
-                    ->withVehicle($vehicles->random()->id)
-                    ->withClient($clients->isNotEmpty() ? $clients->random()->id : null)
-                    ->create();
+                    ->forUser($company->id)
+                    ->nonOverlapping($driver->id, $vehicle->id)
+                    ->create([
+                        'client_id' => $client->id,
+                        'vehicle_type' => $vehicle->vehicle_type,
+                    ]);
             }
         }
+        
+        $this->command->info("✓ Created for {$companyName}: {$clients->count()} clients, {$drivers->count()} drivers, {$vehicles->count()} vehicles, and trips");
+    }
+    
+    private $faker;
+    
+    public function __construct()
+    {
+        $this->faker = \Faker\Factory::create();
     }
 }

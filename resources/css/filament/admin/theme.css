@@ -4,109 +4,94 @@
 
 @layer theme {
   :root {
-    --color-primary-50: 239 246 255;
-    --color-primary-100: 219 234 254;
-    --color-primary-200: 191 219 254;
-    --color-primary-300: 147 197 253;
-    --color-primary-400: 96 165 250;
-    --color-primary-500: 37 99 235;  /* main blue */
-    --color-primary-600: 29 78 216;
-    --color-primary-700: 30 64 175;
-    --color-primary-800: 30 58 138;
-    --color-primary-900: 30 58 138;
+    --color-primary: 0 191 255;       /* #00bfff Primary */
+    --color-secondary: 255 99 71;     /* #ff6347 Accent / Secondary */
+    --color-neutral-dark: 51 51 51;   /* #333333 Text / Dark */
+    --color-neutral-light: 220 220 220; /* #dcdcdc Light Gray */
+    --color-sidebar-bg: 30 30 30;     /* #1e1e1e Sidebar / Topbar background */
   }
-  } 
-  
-.filament-app-layout header.filament-main-topbar {
-    background-color: #FFB300; /* Primary amber */
-    color: #fff;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-/* Navbar links hover */
+/* Navbar / Topbar */
+.filament-app-layout header.filament-main-topbar {
+  background-color: #1e1e1e; /* dark background */
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
 .filament-app-layout header.filament-main-topbar a {
-    color: #fff;
-    transition: color 0.3s ease;
+  color: #00bfff; /* primary */
+  transition: color 0.3s ease;
 }
 .filament-app-layout header.filament-main-topbar a:hover {
-    color: #ffd54f; /* lighter amber on hover */
+  color: #ff6347; /* secondary / accent */
 }
 
 /* Sidebar */
 .filament-sidebar-nav {
-    background-color: #FFF8E1; /* Light amber */
-    border-right: 1px solid #FFB300;
+  background-color: #1e1e1e; /* dark sidebar */
+  border-right: 1px solid #ff6347; /* accent border */
 }
-
-/* Sidebar items */
 .fi-sidebar-item {
-    color: #333;
-    padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
-    transition: all 0.3s ease;
+  color: #dcdcdc; /* light gray text */
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  transition: all 0.3s ease;
 }
 .fi-sidebar-item:hover {
-    background-color: #FFECB3; /* subtle hover */
-    color: #FF6F00; /* darker amber */
+  background-color: #333333; /* dark gray hover */
+  color: #00bfff; /* primary hover */
 }
-
-/* Sidebar icons */
 .fi-sidebar-item-icon {
-    color: #FFB300; /* Primary amber */
-    margin-right: 0.5rem;
-    font-size: 1.2rem;
+  color: #ff6347; /* secondary / accent */
+  margin-right: 0.5rem;
+  font-size: 1.2rem;
 }
 
 /* Form headers */
 .filament-forms-section-header {
-    font-weight: 700;
-    font-size: 1.25rem;
-    color: #FF6F00; /* Darker amber */
-    border-bottom: 2px solid #FFB300;
-    padding-bottom: 0.25rem;
-    margin-bottom: 1rem;
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: #ff6347; /* accent */
+  border-bottom: 2px solid #00bfff; /* primary underline */
+  padding-bottom: 0.25rem;
+  margin-bottom: 1rem;
 }
 
 /* Buttons */
 .fi-icon-btn-icon {
-    background-color: #db0505; /* Tailwind red-400 */
-    padding: 6px;
-    border-radius: 50%;
-    color: #077bc3;
-    transition: transform 0.2s ease, background-color 0.3s ease;
+  background-color: #ff6347; /* accent */
+  padding: 6px;
+  border-radius: 50%;
+  color: #1e1e1e; /* dark text */
+  transition: transform 0.2s ease, background-color 0.3s ease;
 }
 .fi-icon-btn-icon:hover {
-    background-color: #ff3b3b;
-    transform: scale(1.1);
+  background-color: #e5533e; /* slightly darker accent */
+  transform: scale(1.1);
 }
 
 /* Breadcrumbs */
 .fi-breadcrumbs-item-separator {
-    background-color: #FFB300; /* Primary amber */
-    width: 1px;
-    height: 16px;
-    margin: 0 8px;
+  background-color: #00bfff; /* primary */
+  width: 1px;
+  height: 16px;
+  margin: 0 8px;
 }
 .fi-breadcrumbs-item-label {
-    color: #a7a419; /* Slightly muted amber */
-    font-weight: 500;
+  color: #ff6347; /* secondary / accent */
+  font-weight: 500;
 }
 
 /* Header */
 .fi-header {
-    background-color: #1976d2; /* Blue primary for contrast */
-    color: #fff;
-    padding: 1rem;
-    border-radius: 0.5rem;
+  background-color: #00bfff; /* primary */
+  color: #030202;
+  padding: 1rem;
+  border-radius: 0.5rem;
 }
 
-/* Root variables for Filament colors */
-:root {
-    --filament-primary-600: #FFB300;
-    --filament-primary-700: #FF6F00;
-    --filament-primary-50: #176ace;
+/* Primary buttons */
+.fi-btn {
+  --filament-primary-50: #000000;
+  color: #000000;
 }
-.fi-btn{
-        --filament-primary-50: #0052b7;
-     color: #0052b7;
-} 

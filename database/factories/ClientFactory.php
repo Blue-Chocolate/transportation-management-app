@@ -3,20 +3,18 @@
 namespace Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Facades\Hash;
+use App\Models\User;
 
 class ClientFactory extends Factory
 {
-    protected static ?string $password;
-
     public function definition(): array
     {
         return [
-            'name'       => $this->faker->name(),
-            'email'      => $this->faker->unique()->safeEmail(), // Added unique() to prevent duplicate email errors
-            'phone'      => $this->faker->phoneNumber(),
-            'password'   => bcrypt('12345'),
-            'user_id'    => null, // Added to match schema
+            'name'     => $this->faker->name(),
+            'email'    => $this->faker->unique()->safeEmail(),
+            'phone'    => $this->faker->phoneNumber(),
+            'password' => bcrypt('password'),
+            'user_id'  => User::factory(),
         ];
     }
 
