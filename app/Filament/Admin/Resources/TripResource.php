@@ -7,7 +7,7 @@ use App\Models\Trip;
 use App\Models\Driver;
 use App\Models\Vehicle;
 use App\Models\Client;
-use App\Enums\TripStatus;
+use App\Enums\{TripStatus, EmploymentStatus};
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Forms\Components\Select;
@@ -20,6 +20,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
+use Filament\Notifications\Notification;
 
 class TripResource extends Resource
 {
@@ -73,6 +75,18 @@ class TripResource extends Resource
                 ->live()
                 ->afterStateUpdated(function ($state) {
                     self::clearUserCaches(Auth::id());
+                    
+                    // Basic client validation
+                    if ($state) {
+                        $client = Client::where('user_id', Auth::id())->find($state);
+                        if (!$client) {
+                            Notification::make()
+                                ->title('Invalid Client')
+                                ->body('Selected client does not belong to your account.')
+                                ->danger()
+                                ->send();
+                        }
+                    }
                 }),
 
             Select::make('driver_id')
@@ -84,9 +98,45 @@ class TripResource extends Resource
                 ->required()
                 ->preload()
                 ->placeholder('Select a driver...')
-                ->reactive()
-                ->afterStateUpdated(function (callable $set, $state) {
-                    $set('vehicle_id', null);
+                ->live()
+                ->afterStateUpdated(function (callable $set, $state, callable $get) {
+                    $set('vehicle_id', null); // Reset vehicle when driver changes
+                    
+                    if ($state) {
+                        // Validate driver ownership and status
+                        $driver = Driver::where('user_id', Auth::id())->find($state);
+                        if (!$driver) {
+                            Notification::make()
+                                ->title('Invalid Driver')
+                                ->body('Selected driver does not belong to your account.')
+                                ->danger()
+                                ->send();
+                            return;
+                        }
+
+                        // Check driver employment status
+                        $status = $driver->employment_status;
+                        $isActive = ($status instanceof EmploymentStatus) 
+                            ? $status === EmploymentStatus::ACTIVE
+                            : $status === 'active';
+                            
+                        if (!$isActive) {
+                            $statusValue = ($status instanceof EmploymentStatus) ? $status->value : (string) $status;
+                            Notification::make()
+                                ->title('Driver Not Active')
+                                ->body("Driver is not currently active. Status: {$statusValue}")
+                                ->warning()
+                                ->send();
+                        }
+
+                        // Check for overlaps if times are set
+                        $startTime = $get('start_time');
+                        $endTime = $get('end_time');
+                        if ($startTime && $endTime) {
+                            self::checkDriverOverlaps($state, $startTime, $endTime);
+                        }
+                    }
+                    
                     Log::info('Driver changed', ['driver_id' => $state]);
                 }),
 
@@ -102,16 +152,86 @@ class TripResource extends Resource
                 ->searchable()
                 ->required()
                 ->placeholder('Select a vehicle (choose driver first)...')
-                ->live(),
+                ->live()
+                ->afterStateUpdated(function ($state, callable $get) {
+                    if ($state) {
+                        // Validate vehicle ownership
+                        $vehicle = Vehicle::where('user_id', Auth::id())->find($state);
+                        if (!$vehicle) {
+                            Notification::make()
+                                ->title('Invalid Vehicle')
+                                ->body('Selected vehicle does not belong to your account.')
+                                ->danger()
+                                ->send();
+                            return;
+                        }
+
+                        // Check driver-vehicle assignment
+                        $driverId = $get('driver_id');
+                        if ($driverId) {
+                            $driver = Driver::find($driverId);
+                            if ($driver && !$driver->vehicles()->where('vehicles.id', $state)->exists()) {
+                                Notification::make()
+                                    ->title('Vehicle Assignment Error')
+                                    ->body('This vehicle is not assigned to the selected driver.')
+                                    ->warning()
+                                    ->send();
+                                return;
+                            }
+                        }
+
+                        // Check for overlaps if times are set
+                        $startTime = $get('start_time');
+                        $endTime = $get('end_time');
+                        if ($startTime && $endTime) {
+                            self::checkVehicleOverlaps($state, $startTime, $endTime);
+                        }
+                    }
+                }),
 
             DateTimePicker::make('start_time')
                 ->required()
                 ->default(now()->addHour())
                 ->live()
-                ->afterStateUpdated(function ($state, callable $set) {
+                ->afterStateUpdated(function ($state, callable $set, callable $get) {
                     if ($state) {
-                        $endTime = \Carbon\Carbon::parse($state)->addHour();
-                        $set('end_time', $endTime->format('Y-m-d H:i:s'));
+                        try {
+                            $start = Carbon::parse($state);
+                            
+                            // Auto-set end time (1 hour later)
+                            $endTime = $start->copy()->addHour();
+                            $set('end_time', $endTime->format('Y-m-d H:i:s'));
+                            
+                            // Business rule: No past trips (5-minute grace period)
+                            if ($start->lt(now()->subMinutes(5))) {
+                                Notification::make()
+                                    ->title('Invalid Start Time')
+                                    ->body('Trip cannot be scheduled in the past.')
+                                    ->danger()
+                                    ->send();
+                                return;
+                            }
+
+                            // Check overlaps for driver and vehicle
+                            $driverId = $get('driver_id');
+                            $vehicleId = $get('vehicle_id');
+                            $endTime = $get('end_time');
+                            
+                            if ($driverId && $endTime) {
+                                self::checkDriverOverlaps($driverId, $state, $endTime);
+                            }
+                            
+                            if ($vehicleId && $endTime) {
+                                self::checkVehicleOverlaps($vehicleId, $state, $endTime);
+                            }
+                            
+                        } catch (\Exception $e) {
+                            Notification::make()
+                                ->title('Invalid Date Format')
+                                ->body('Please enter a valid start time.')
+                                ->danger()
+                                ->send();
+                        }
                     }
                 }),
 
@@ -119,7 +239,48 @@ class TripResource extends Resource
                 ->required()
                 ->default(now()->addHours(2))
                 ->after('start_time')
-                ->placeholder('End time...'),
+                ->placeholder('End time...')
+                ->live()
+                ->afterStateUpdated(function ($state, callable $get) {
+                    if ($state) {
+                        try {
+                            $startTime = $get('start_time');
+                            if (!$startTime) return;
+                            
+                            $start = Carbon::parse($startTime);
+                            $end = Carbon::parse($state);
+                            
+                            // Business rule: Maximum 24 hours duration
+                            if ($end->diffInHours($start) > 24) {
+                                Notification::make()
+                                    ->title('Trip Too Long')
+                                    ->body('Trip duration cannot exceed 24 hours.')
+                                    ->warning()
+                                    ->send();
+                                return;
+                            }
+
+                            // Check overlaps for driver and vehicle
+                            $driverId = $get('driver_id');
+                            $vehicleId = $get('vehicle_id');
+                            
+                            if ($driverId) {
+                                self::checkDriverOverlaps($driverId, $startTime, $state);
+                            }
+                            
+                            if ($vehicleId) {
+                                self::checkVehicleOverlaps($vehicleId, $startTime, $state);
+                            }
+                            
+                        } catch (\Exception $e) {
+                            Notification::make()
+                                ->title('Invalid Date Format')
+                                ->body('Please enter a valid end time.')
+                                ->danger()
+                                ->send();
+                        }
+                    }
+                }),
 
             Select::make('status')
                 ->options(TripStatus::options())
@@ -132,6 +293,64 @@ class TripResource extends Resource
                 ->columnSpanFull()
                 ->placeholder('Optional trip description...'),
         ]);
+    }
+
+    /**
+     * Check for driver overlaps and show notification
+     */
+    private static function checkDriverOverlaps($driverId, $startTime, $endTime): void
+    {
+        try {
+            $start = Carbon::parse($startTime);
+            $end = Carbon::parse($endTime);
+            
+            $conflict = Trip::where('user_id', Auth::id())
+                ->where('driver_id', $driverId)
+                ->where('start_time', '<', $end)
+                ->where('end_time', '>', $start)
+                ->whereNotIn('status', [TripStatus::CANCELLED->value])
+                ->first();
+                
+            if ($conflict) {
+                Notification::make()
+                    ->title('Driver Schedule Conflict')
+                    ->body("Driver has a conflicting trip from {$conflict->start_time->format('M j, H:i')} to {$conflict->end_time->format('M j, H:i')}.")
+                    ->warning()
+                    ->persistent()
+                    ->send();
+            }
+        } catch (\Exception $e) {
+            Log::error('Driver overlap check failed', ['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Check for vehicle overlaps and show notification
+     */
+    private static function checkVehicleOverlaps($vehicleId, $startTime, $endTime): void
+    {
+        try {
+            $start = Carbon::parse($startTime);
+            $end = Carbon::parse($endTime);
+            
+            $conflict = Trip::where('user_id', Auth::id())
+                ->where('vehicle_id', $vehicleId)
+                ->where('start_time', '<', $end)
+                ->where('end_time', '>', $start)
+                ->whereNotIn('status', [TripStatus::CANCELLED->value])
+                ->first();
+                
+            if ($conflict) {
+                Notification::make()
+                    ->title('Vehicle Schedule Conflict')
+                    ->body("Vehicle has a conflicting trip from {$conflict->start_time->format('M j, H:i')} to {$conflict->end_time->format('M j, H:i')}.")
+                    ->warning()
+                    ->persistent()
+                    ->send();
+            }
+        } catch (\Exception $e) {
+            Log::error('Vehicle overlap check failed', ['error' => $e->getMessage()]);
+        }
     }
 
     public static function table(Table $table): Table

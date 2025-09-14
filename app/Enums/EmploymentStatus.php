@@ -8,6 +8,7 @@ enum EmploymentStatus: string implements HasLabel
 {
     case ACTIVE = 'active';
     case INACTIVE = 'inactive';
+    case TERMINATED = 'terminated';
 
     public function getLabel(): ?string
     {

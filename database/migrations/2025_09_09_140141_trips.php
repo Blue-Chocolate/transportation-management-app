@@ -32,10 +32,8 @@ return new class extends Migration
     $table->index('status');
 });
 
-// Add CHECK constraint separately
 
 
-// لاحقًا في migration منفصل (أو في نفس الـ AddTripsTriggersAndConstraints) ضع الـ CHECK constraint:
 try {
 DB::statement("ALTER TABLE trips ADD CONSTRAINT chk_trip_times CHECK (start_time < end_time)");
 } catch (\Throwable $e) {

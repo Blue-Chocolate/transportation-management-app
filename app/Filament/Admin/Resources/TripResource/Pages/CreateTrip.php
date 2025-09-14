@@ -5,11 +5,13 @@ namespace App\Filament\Admin\Resources\TripResource\Pages;
 use App\Filament\Admin\Resources\TripResource;
 use App\Services\TripValidationService;
 use App\Services\TripCreationService;
-use App\Enums\TripStatus;
+use App\Models\{Trip, Driver, Vehicle};
+use App\Enums\{TripStatus, EmploymentStatus};
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\{Auth, Log};
 use Illuminate\Validation\ValidationException;
+use Carbon\Carbon;
 
 class CreateTrip extends CreateRecord
 {
@@ -22,7 +24,184 @@ class CreateTrip extends CreateRecord
         $this->setDefaultFormValues();
     }
 
-     protected function mutateFormDataBeforeCreate(array $data): array
+    // FORM-LEVEL VALIDATION - Real-time validation as user interacts with form
+    protected function getFormValidationRules(): array
+    {
+        return [
+            'start_time' => [
+                'required',
+                'date',
+                'after:now',
+                function ($attribute, $value, $fail) {
+                    $this->validateFormStartTime($value, $fail);
+                },
+            ],
+            'end_time' => [
+                'required',
+                'date',
+                'after:start_time',
+                function ($attribute, $value, $fail) {
+                    $this->validateFormEndTime($value, $fail);
+                },
+            ],
+            'driver_id' => [
+                'required',
+                'exists:drivers,id',
+                function ($attribute, $value, $fail) {
+                    $this->validateFormDriver($value, $fail);
+                },
+            ],
+            'vehicle_id' => [
+                'required',
+                'exists:vehicles,id',
+                function ($attribute, $value, $fail) {
+                    $this->validateFormVehicle($value, $fail);
+                },
+            ],
+            'client_id' => [
+                'required',
+                'exists:clients,id',
+            ],
+            'status' => [
+                'required',
+                'in:' . implode(',', array_column(TripStatus::cases(), 'value')),
+            ],
+        ];
+    }
+
+    // FORM VALIDATION HELPERS - These run during form interaction
+    private function validateFormStartTime($value, $fail): void
+    {
+        try {
+            $start = Carbon::parse($value);
+            
+            // Business rule: No past trips (5-minute grace period)
+            if ($start->lt(now()->subMinutes(5))) {
+                $fail('Trip cannot be scheduled in the past.');
+            }
+        } catch (\Exception $e) {
+            $fail('Invalid start time format.');
+        }
+    }
+
+    private function validateFormEndTime($value, $fail): void
+    {
+        try {
+            $startTime = $this->data['start_time'] ?? null;
+            if (!$startTime) return;
+            
+            $start = Carbon::parse($startTime);
+            $end = Carbon::parse($value);
+            
+            // Business rule: Maximum 24 hours duration
+            if ($end->diffInHours($start) > 24) {
+                $fail('Trip duration cannot exceed 24 hours.');
+            }
+        } catch (\Exception $e) {
+            $fail('Invalid end time format.');
+        }
+    }
+
+    private function validateFormDriver($driverId, $fail): void
+    {
+        $driver = Driver::where('user_id', Auth::id())->find($driverId);
+        
+        if (!$driver) {
+            $fail('Driver does not belong to your account.');
+            return;
+        }
+
+        // Check driver employment status
+        $status = $driver->employment_status;
+        $isActive = ($status instanceof EmploymentStatus) 
+            ? $status === EmploymentStatus::ACTIVE
+            : $status === 'active';
+            
+        if (!$isActive) {
+            $statusValue = ($status instanceof EmploymentStatus) ? $status->value : (string) $status;
+            $fail("Driver is not currently active. Status: {$statusValue}");
+        }
+
+        // Check for overlapping trips in real-time
+        $this->checkFormDriverOverlaps($driverId, $fail);
+    }
+
+    private function validateFormVehicle($vehicleId, $fail): void
+    {
+        $vehicle = Vehicle::where('user_id', Auth::id())->find($vehicleId);
+        
+        if (!$vehicle) {
+            $fail('Vehicle does not belong to your account.');
+            return;
+        }
+
+        // Check driver-vehicle assignment
+        $driverId = $this->data['driver_id'] ?? null;
+        if ($driverId) {
+            $driver = Driver::find($driverId);
+            if ($driver && !$driver->vehicles()->where('vehicles.id', $vehicleId)->exists()) {
+                $fail('This vehicle is not assigned to the selected driver.');
+            }
+        }
+
+        // Check for overlapping trips in real-time
+        $this->checkFormVehicleOverlaps($vehicleId, $fail);
+    }
+
+    private function checkFormDriverOverlaps($driverId, $fail): void
+    {
+        $startTime = $this->data['start_time'] ?? null;
+        $endTime = $this->data['end_time'] ?? null;
+        
+        if (!$startTime || !$endTime) return;
+
+        try {
+            $start = Carbon::parse($startTime);
+            $end = Carbon::parse($endTime);
+            
+            $conflicts = Trip::where('user_id', Auth::id())
+                ->where('driver_id', $driverId)
+                ->where('start_time', '<', $end)
+                ->where('end_time', '>', $start)
+                ->whereNotIn('status', [TripStatus::CANCELLED->value])
+                ->first();
+                
+            if ($conflicts) {
+                $fail("Driver has a conflicting trip from {$conflicts->start_time->format('M j, H:i')} to {$conflicts->end_time->format('M j, H:i')}.");
+            }
+        } catch (\Exception $e) {
+            Log::error('Form validation driver overlap check failed', ['error' => $e->getMessage()]);
+        }
+    }
+
+    private function checkFormVehicleOverlaps($vehicleId, $fail): void
+    {
+        $startTime = $this->data['start_time'] ?? null;
+        $endTime = $this->data['end_time'] ?? null;
+        
+        if (!$startTime || !$endTime) return;
+
+        try {
+            $start = Carbon::parse($startTime);
+            $end = Carbon::parse($endTime);
+            
+            $conflicts = Trip::where('user_id', Auth::id())
+                ->where('vehicle_id', $vehicleId)
+                ->where('start_time', '<', $end)
+                ->where('end_time', '>', $start)
+                ->whereNotIn('status', [TripStatus::CANCELLED->value])
+                ->first();
+                
+            if ($conflicts) {
+                $fail("Vehicle has a conflicting trip from {$conflicts->start_time->format('M j, H:i')} to {$conflicts->end_time->format('M j, H:i')}.");
+            }
+        } catch (\Exception $e) {
+            Log::error('Form validation vehicle overlap check failed', ['error' => $e->getMessage()]);
+        }
+    }
+
+    // SERVICE LAYER VALIDATION - Comprehensive validation before database operations
+    protected function mutateFormDataBeforeCreate(array $data): array
     {
         Log::info('CreateTrip: Mutating form data before create', ['original_data' => $data]);
         
@@ -30,7 +209,16 @@ class CreateTrip extends CreateRecord
             $data['user_id'] = Auth::id();
             Log::info('CreateTrip: Added user_id to data', ['user_id' => $data['user_id']]);
             
-            // Use app() helper instead of constructor injection
+            // This is where the SERVICE LAYER validation happens
+            // It performs comprehensive validation including:
+            // - User authentication
+            // - Date validation with business rules
+            // - Resource validation (client, driver, vehicle ownership)
+            // - Driver employment status
+            // - Driver-vehicle assignment
+            // - Comprehensive overlap detection
+            // - Status validation
+            // - Data enrichment
             $validatedData = app(TripValidationService::class)->validateAndEnrich($data);
             
             Log::info('CreateTrip: Data validation and enrichment completed', [
