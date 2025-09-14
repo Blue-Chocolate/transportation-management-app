@@ -1,61 +1,157 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# 🚚 **Transportation Management App - Filament Challenge**
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+## **Table of Contents**
 
-## About Laravel
+1. [Laravel Project Setup](#laravel-project-setup)  
+2. [Manual Installation](#manual-installation)  
+3. [Project Summary](#project-summary)  
+4. [Database Structure & Relationships](#database-structure--relationships)  
+5. [Key Features](#key-features)  
+6. [Overlapping Trip Prevention](#overlapping-trip-prevention)  
+7. [Dashboard & Widgets](#dashboard--widgets)  
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## **Laravel Project Setup**
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### **Prerequisites**
+- **Docker**  
+- **Docker Compose**  
 
-## Learning Laravel
+### **Getting Started**
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+```bash
+# Clone the repository
+git clone https://github.com/Blue-Chocolate/transportation-management-app.git
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+# Navigate to project
+cd transportation-management-app
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+# Create environment file
+cp .env.example .env
 
-## Laravel Sponsors
+# Generate application key
+php artisan key:generate
+```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### **Build and Start Docker Containers**
 
-### Premium Partners
+```bash
+docker-compose up -d --build
+```
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+### **Install Dependencies & Run Migrations**
 
-## Contributing
+```bash
+docker-compose exec app composer install
+docker-compose exec app php artisan migrate
+docker-compose exec app php artisan db:seed
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+---
 
-## Code of Conduct
+## **Manual Installation**
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### **Composer**
 
-## Security Vulnerabilities
+```bash
+composer install
+cp .env.example .env
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### **Redis 2.0**  
+> ⚠️ Open **Bash as Administrator**  
+```bash
 
-## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+wsl --install
+
+Install Redis inside WSL (Ubuntu):
+
+sudo apt update
+sudo apt install redis-server -y
+
+sudo service redis-server start
+
+# Follow Linux guide to install Redis 2.0
+```
+
+### **Tailwind CSS v3.4**
+
+```bash
+
+npm install -g tailwindcss@3.4
+tailwindcss -v      # Expected: 3.4.x
+tailwindcss init
+```
+
+### **Pest v2.0**
+
+```bash
+composer require pestphp/pest:^2.0 --dev
+php artisan pest:install
+vendor\bin\pest --version  # Expected: 2.x
+```
+
+---
+
+## **Project Summary**
+
+The **transportation_app** database, implemented using **MariaDB** and managed via **phpMyAdmin**, supports a **transportation management system** for companies (admin users) managing **drivers, vehicles, clients, and trips**.
+
+---
+
+## **Database Structure & Relationships**
+
+### **Entities**
+
+| Entity | Description | Key Attributes |
+|--------|-------------|----------------|
+| **Users (Admins/Companies)** | Manage drivers, vehicles, clients, trips | `id, name, email, password, role ('admin')` |
+| **Clients** | Linked to user via `user_id` | `id, name, email, phone, password`   |
+| **Drivers** | Attributes: `id, name, user_id, phone, license, employment_status`  | Linked to user via `user_id` |
+| **Vehicles** | Attributes: `id, name, registration_number, vehicle_type, user_id` | Linked to user via `user_id` |
+| **Trips** | Track trips | `id, client_id, driver_id, vehicle_id, start_time, end_time, status` |
+| **Driver_Vehicle** | Junction table linking drivers and vehicles | `id, driver_id, vehicle_id, user_id` |
+
+### **Relationships**
+
+- **One-to-Many:** Users → Drivers/Vehicles/Clients/Trips  
+- **Many-to-Many:** Drivers ↔ Vehicles (driver_vehicle)  
+- **One-to-Many (Trips):** Drivers, Vehicles, Clients → Trips  
+
+---
+
+## **Key Features**
+
+### **Prevention of Overlapping Trips**
+
+Implemented across **three layers**:
+
+1. **Database-Level (Fail-Safe)**  
+   - SQL triggers (`trips_before_insert`, `trips_before_update`)  
+   - Rejects conflicting trips for drivers/vehicles  
+
+2. **Form-Level (Real-Time Feedback)**  
+   - Filament forms (`CreateTrip.php`, `TripResource.php`)  
+   - Validates driver/vehicle availability, start/end times, duration (≤ 24h)  
+
+3. **Service-Layer (Application-Level Pre-Save)**  
+   - `TripValidationService` final validation  
+   - Checks ownership, driver/vehicle assignment, active status, and overlaps  
+
+**Supporting Features**  
+- **Redis caching** for drivers, vehicles, and clients  
+- **Business rules:** Prevent past trips, max 24h trip duration, only active drivers selectable  
+- **Notifications & Logging** for conflicts  
+
+---
+
+## **Dashboard & Widgets**
+
+| Widget                 |         Purpose           |                Notes      |
+|--------                |---------------------------|-----------------------------------------|
+| **ActiveTripsWidget**  | Shows current active trips | Cached 1 min, truck icon, warning color |
+| **AvailabilityWidget** | Shows available drivers & vehicles | Cached 1 min, user-group/truck icons |
+| **DriverStatsOverviewWidget** | Personalized driver stats | Vehicles assigned, completed trips, active trips |
+| **MonthlyTripsWidget** | Completed trips this month | Cached 5 min, success color |
